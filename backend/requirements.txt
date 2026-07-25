@@ -11,6 +11,14 @@ python-multipart==0.0.9
 pdfplumber==0.11.10
 python-docx==1.1.2
 rank_bm25==0.2.2
+sentence-transformers>=3.0.0
+
+# PDF *generation* for the spatial-compliance demo doc (docs/superpowers/specs/
+# 2026-07-25-spatial-compliance-design.md §7) — pdfplumber above only READS
+# PDFs; this is the only PDF-writing lib in the venv. Confirmed via a real
+# `pip install` (no other PDF-writer — fpdf2/weasyprint/pdfkit — was already
+# present) that this resolves clean against every other pin in this file.
+reportlab==5.0.0
 
 # Gemini API (Google AI Studio) — HexaFalls default prose provider (app/llm.py)
 # and vision extraction (app/gemini_vision.py). Installed unconditionally, same
@@ -65,6 +73,9 @@ starlette==0.38.6
 # dependency of mcp/anthropic (confirmed httpx==0.28.1 present); pinned here
 # explicitly now that it's a direct import, not just incidental.
 httpx==0.28.1
+
+# OpenAI SDK for IAMHC fallback chain
+openai>=1.0.0
 
 # --------------------------------------------------------------------------- #
 # OPTIONAL — LLM-powered compliance extraction (app/llm_extract.py).
