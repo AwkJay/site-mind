@@ -1,36 +1,29 @@
-"""SiteMind field bot (plan §F1, upgraded 2026-07-25) — Telegram + ElevenLabs
-multilingual voice front end for SiteMind's project copilot. Standalone
-service; never touches the deterministic verdict core.
+"""SiteMind field bot — project-context-aware Telegram + ElevenLabs
+multilingual voice front end for SiteMind.  Standalone service; never
+touches the deterministic verdict core.
 
-Upgraded 2026-07-25 from the single-shot, RAG-only `/api/copilot/ask` to the
-F2 LangGraph conversational edge (`/api/copilot/chat`, `app/agents/
-copilot_agent.py`) — the earlier version could only search the standards/RAG
-corpus, so it abstained ("no confident answer") on anything about NCRs,
-schedule risk, or supply chain, which looked like a broken bot. The agent's
-tools (search_codebook, query_knowledge_base, get_open_ncrs,
-get_schedule_risk, get_supply_chain_status) give it read access across every
-pillar — this is intentionally the guardrail, not a gap: every tool only
-*reads* an already-computed result, none can write/mutate/execute anything,
-so there is no path for this bot to "mess up" project state even though it
-now has full project visibility. Each Telegram chat gets its own stable
-`thread_id` (`telegram-<chat_id>`) so the agent's own conversation memory
-(MongoDB-backed, see copilot_agent.py) carries across messages in that chat
-— a real multi-turn conversation, not a one-shot Q&A.
+Architecture (2026-07-26 rewrite):
+  1. On every message, fetch live project context from the backend REST
+     APIs (overview, supply chain, schedule risks, timeline, cost-risk)
+     via context.py — cached 60 s so we don't hammer the backend.
+  2. Inject that context into a Gemini system prompt and answer directly
+     (answerer.py).  This gives the bot full project awareness without
+     depending on the LangGraph copilot agent being enabled.
+  3. If the direct answer abstains or Gemini is unavailable, fall back
+     to POST /api/copilot/chat (the LangGraph agent with its own tools).
+  4. Translate the answer back to the user's language and synthesise a
+     voice reply via ElevenLabs TTS.
 
-Division of labor unchanged: ElevenLabs does STT (Scribe) + TTS, Gemini does
-translation only (the bot's own call, separate from the backend agent's own
-Gemini use), the backend copilot still owns retrieval/abstention/citations —
-this bot never fabricates an answer, and falls back gracefully (same
-ABSTAIN_MSG wording) whenever the backend itself falls back to the older
-single-shot answerer (COPILOT_AGENT_ENABLED off or no GEMINI_API_KEY on the
-backend).
+Commands:
+  /start    — welcome message
+  /status   — quick project status summary (force-refreshes context)
+  /supply   — supply chain status at a glance
+  /risks    — top schedule risks
 
-A small in-memory reply cache avoids re-spending Gemini/ElevenLabs quota (and
-guarantees a consistent answer+voice) when the exact same question is asked
-again — keyed on (english question, asker's original message) since the
-target language for translation/TTS depends on the latter.
+ElevenLabs pipeline unchanged: STT (Scribe) for voice-note input,
+TTS (eleven_multilingual_v2, opus_48000_128) for voice replies.
 
-Run: `./run.sh` (long-polling, no public webhook needed for the demo).
+Run: ./run.sh (long-polling, no public webhook needed).
 """
 from __future__ import annotations
 
@@ -42,7 +35,17 @@ import httpx
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+from context import fetch_context, fetch_supply_chain_summary, fetch_schedule_risks_summary
+from answerer import answer_with_context, answer_via_copilot, ABSTAIN_MSG
 
 load_dotenv()
 
@@ -56,16 +59,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-ABSTAIN_MSG = "No confident answer in the project corpus — raising this as an RFI."
-
 _eleven = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 # --------------------------------------------------------------------------- #
-# Reply cache — avoids re-spending Gemini/ElevenLabs quota on a repeat
-# question and guarantees the same question always gets the same answer+
-# voice. Bounded (simple FIFO eviction via OrderedDict) so a long-running
-# process can't grow this unboundedly; not persisted across restarts —
-# that's fine, it's a quota/consistency nicety, not a source of truth.
+# Reply cache — avoids re-spending Gemini/ElevenLabs quota on repeat questions.
+# Bounded FIFO; not persisted across restarts.
 # --------------------------------------------------------------------------- #
 _CACHE_MAX = 200
 _reply_cache: "OrderedDict[tuple[str, str], tuple[str, bytes]]" = OrderedDict()
@@ -88,44 +86,36 @@ def _cache_put(question_en: str, original_text: str, reply_local: str, audio: by
 
 
 # --------------------------------------------------------------------------- #
-# Gemini translation (thin — Gemini never touches retrieval or verdicts here)
+# LLM translation (using IAMHC fallback chain)
 # --------------------------------------------------------------------------- #
-def _gemini_translate(system: str, text: str) -> str:
-    """Returns "" on any failure (missing key, quota, network) so callers can
-    fall back to the original text — translation is a nicety, never a hard
-    dependency for answering the question."""
-    if not GEMINI_API_KEY:
-        return ""
+def _llm_translate(system: str, text: str) -> str:
+    """Returns "" on any failure so callers can fall back to the original."""
+    from llm_client import generate
     try:
-        from google import genai
-        from google.genai import types
-
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        resp = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=text,
-            config=types.GenerateContentConfig(system_instruction=system, temperature=0, max_output_tokens=400),
-        )
-        return (resp.text or "").strip()
+        resp = generate(system, text, temperature=0.1, max_tokens=1000)
+        return (resp or "").strip()
     except Exception:
-        log.exception("Gemini translation failed")
+        log.exception("LLM translation failed")
         return ""
 
 
 def translate_to_english(text: str) -> str:
-    out = _gemini_translate(
-        "Translate the user's message to English. If it is already in English, return it "
-        "unchanged. Reply with ONLY the translation — no explanation, no quotes.",
+    out = _llm_translate(
+        "You are a professional translator. Translate the user's message to English. "
+        "CRITICAL INSTRUCTION: If the message is already in English, you MUST return it EXACTLY unchanged. "
+        "Output ONLY the English translation. Do not include any explanations, quotes, or markdown.",
         text,
     )
     return out or text
 
 
 def translate_from_english(english_text: str, reference_text: str) -> str:
-    out = _gemini_translate(
-        "Translate the given English text into the SAME language as this reference message: "
-        f"{reference_text!r}. If that reference is already in English, return the English text "
-        "unchanged. Reply with ONLY the translation — no explanation, no quotes.",
+    out = _llm_translate(
+        "You are a professional translator. Follow these instructions strictly:\n"
+        f"1. Identify the language of this reference message: {reference_text!r}\n"
+        "2. If the reference message is in English, you MUST output the English text provided below EXACTLY as is, without translation.\n"
+        "3. If the reference message is NOT in English, translate the English text provided below into the EXACT SAME language as the reference message.\n"
+        "4. Output ONLY the final text. Do not include any explanations, greetings, or conversational filler.",
         english_text,
     )
     return out or english_text
@@ -143,14 +133,13 @@ def transcribe_voice(ogg_bytes: bytes) -> str:
 
 
 def synthesize_voice(text: str) -> bytes:
-    """Returns b"" on any TTS failure — caller falls back to text-only reply."""
+    """Returns b"" on any TTS failure — caller falls back to text-only."""
     try:
         audio = _eleven.text_to_speech.convert(
             text=text,
             voice_id=ELEVENLABS_VOICE_ID,
             model_id="eleven_multilingual_v2",
-            output_format="opus_48000_128",  # real OGG/Opus container — verified against
-            # Telegram's sendVoice requirement live this session.
+            output_format="opus_48000_128",  # real OGG/Opus — Telegram sendVoice compatible
         )
         return b"".join(audio)
     except Exception:
@@ -159,70 +148,61 @@ def synthesize_voice(text: str) -> bytes:
 
 
 # --------------------------------------------------------------------------- #
-# Copilot backend
+# Hybrid answer pipeline
 # --------------------------------------------------------------------------- #
-def ask_copilot(question_en: str, thread_id: str) -> dict:
-    """POSTs to the F2 conversational edge, /api/copilot/chat — full
-    read-only project access (NCRs, schedule risk, supply chain, standards/
-    KB search) via the LangGraph agent, with per-chat conversation memory.
-    Falls back server-side to the older single-shot answerer whenever the
-    agent isn't available on the backend (COPILOT_AGENT_ENABLED off, or no
-    GEMINI_API_KEY there) — same response shape either way. Raises httpx
-    errors up to the caller, which replies with a friendly "backend
-    unreachable"."""
-    resp = httpx.post(
-        f"{BACKEND_URL}/api/copilot/chat",
-        json={"message": question_en, "thread_id": thread_id},
-        timeout=60.0,
-    )
-    resp.raise_for_status()
-    return resp.json()
+def _get_answer(question_en: str, thread_id: str) -> str:
+    """Try direct Gemini answer with project context, fall back to copilot agent.
 
+    Returns a non-empty answer string, or the abstention message if
+    everything fails.
+    """
+    # Step 1: Fetch live project context (cached, fast after first call)
+    context = fetch_context(BACKEND_URL)
 
-def format_reply(payload: dict) -> str:
-    """The agent's own system prompt (copilot_agent.py) already produces the
-    exact abstention wording when no tool result clears its confidence floor
-    — trust `answer` as-is rather than inferring abstention from an empty
-    `sources` list, since most tool calls here (NCRs/schedule/supply chain)
-    never populate `sources` at all even on a fully successful answer (see
-    run_chat()'s docstring: sources are only extracted from search_codebook/
-    query_knowledge_base calls). Citations are appended only when present."""
-    answer = payload.get("answer") or ABSTAIN_MSG
-    sources = payload.get("sources") or []
-    if not sources:
+    # Step 2: Try direct Gemini answer with full context
+    if context:
+        answer = answer_with_context(question_en, context)
+        if answer and ABSTAIN_MSG not in answer:
+            log.info("Answered via direct context")
+            return answer
+
+    # Step 3: Fall back to copilot agent (has search tools for standards Q&A)
+    answer = answer_via_copilot(question_en, thread_id, BACKEND_URL)
+    if answer:
+        log.info("Answered via copilot fallback")
         return answer
-    lines = [answer, ""]
-    for s in sources[:3]:
-        label = s.get("label", "Source")
-        url = s.get("verify_url")
-        lines.append(f"— {label}" + (f" ({url})" if url else ""))
-    return "\n".join(lines)
+
+    # Step 4: Nothing worked
+    log.warning("All answer paths exhausted — abstaining")
+    return ABSTAIN_MSG
 
 
 # --------------------------------------------------------------------------- #
-# Handlers
+# Telegram handlers
 # --------------------------------------------------------------------------- #
 async def _respond(update: Update, original_text: str, question_en: str) -> None:
+    """Core response pipeline: answer → translate → text reply → voice reply."""
     cached = _cache_get(question_en, original_text)
     if cached is not None:
         reply_local, audio = cached
-        await update.message.reply_text(reply_local)
+        try:
+            await update.message.reply_text(reply_local, parse_mode="MarkdownV2")
+        except Exception as e:
+            log.error(f"Markdown parse error: {e}, falling back to plain text")
+            await update.message.reply_text(reply_local)
         if audio:
             await update.message.reply_voice(voice=audio)
         return
 
     thread_id = f"telegram-{update.effective_chat.id}"
-    try:
-        payload = ask_copilot(question_en, thread_id)
-    except Exception:
-        log.exception("Backend unreachable")
-        await update.message.reply_text("SiteMind backend is unreachable right now — please try again shortly.")
-        return
-
-    reply_en = format_reply(payload)
+    reply_en = _get_answer(question_en, thread_id)
     reply_local = translate_from_english(reply_en, original_text)
 
-    await update.message.reply_text(reply_local)
+    try:
+        await update.message.reply_text(reply_local, parse_mode="MarkdownV2")
+    except Exception as e:
+        log.error(f"Markdown parse error: {e}, falling back to plain text")
+        await update.message.reply_text(reply_local)
 
     audio = synthesize_voice(reply_local)
     if audio:
@@ -256,13 +236,84 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await _respond(update, transcript, question_en)
 
 
+# --------------------------------------------------------------------------- #
+# Slash commands
+# --------------------------------------------------------------------------- #
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Welcome message with usage hints."""
+    await update.message.reply_text(
+        "👷 *SiteMind Field Bot*\n\n"
+        "I'm your project intelligence assistant for the DC1 data centre project in Chennai.\n\n"
+        "You can:\n"
+        "• Ask me anything about the project — supply chain, schedule, timeline, status\n"
+        "• Send a voice note in Hindi, English, or any regional language\n"
+        "• Use commands:\n"
+        "  /status — project status overview\n"
+        "  /supply — supply chain status\n"
+        "  /risks — schedule risks\n\n"
+        "I answer from live project data only — I'll tell you if I don't have the information.",
+        parse_mode="Markdown",
+    )
+
+
+async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Quick project status summary — force-refreshes context."""
+    project_context = fetch_context(BACKEND_URL, force=True)
+    if not project_context:
+        await update.message.reply_text("⚠️ SiteMind backend is unreachable — please try again shortly.")
+        return
+
+    # Use Gemini to summarise the context into a concise status update
+    answer = answer_with_context(
+        "Give me a concise project status summary covering: overall health, "
+        "open NCRs, supply chain alerts, schedule risks, and cost exposure. "
+        "Use bullet points.",
+        project_context,
+    )
+    if not answer:
+        # Fall back to raw context (trimmed)
+        answer = project_context[:2000]
+
+    await update.message.reply_text(f"📊 *Project Status*\n\n{answer}", parse_mode="Markdown")
+
+
+async def cmd_supply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Supply chain status at a glance."""
+    summary = fetch_supply_chain_summary(BACKEND_URL)
+    if not summary:
+        await update.message.reply_text("⚠️ Could not fetch supply chain data.")
+        return
+    await update.message.reply_text(f"🚛 *Supply Chain Status*\n\n{summary}", parse_mode="Markdown")
+
+
+async def cmd_risks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Top schedule risks."""
+    summary = fetch_schedule_risks_summary(BACKEND_URL)
+    if not summary:
+        await update.message.reply_text("⚠️ Could not fetch schedule risk data.")
+        return
+    await update.message.reply_text(f"⚠️ *Schedule Risks*\n\n{summary}", parse_mode="Markdown")
+
+
+# --------------------------------------------------------------------------- #
+# App builder
+# --------------------------------------------------------------------------- #
 def build_app() -> Application:
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Commands
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("supply", cmd_supply))
+    app.add_handler(CommandHandler("risks", cmd_risks))
+
+    # Free-form messages
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
     return app
 
 
 if __name__ == "__main__":
-    log.info("Starting SiteMind field bot (long-polling)...")
+    log.info("Starting SiteMind field bot (long-polling, context-aware)...")
     build_app().run_polling()
