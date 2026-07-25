@@ -77,7 +77,6 @@ Thumbs.db
 lru_cache/
 
 # Private / local-only — not for the public repo
-docs/
 .claude/
 .playwright-mcp/
 graphify-out/

@@ -1,0 +1,11 @@
+test_id,system,parameter,measured_value,unit,timestamp,location_zone,equipment_class
+CT-101,cooling,supply_air_temp,22.5,degC,2026-07-15T09:00:00Z,White Space Zone A,A1
+CT-102,cooling,supply_air_temp,24.8,degC,2026-07-15T09:05:00Z,White Space Zone A,A1
+CT-103,cooling,supply_air_temp,30.5,degC,2026-07-15T09:10:00Z,White Space Zone B,A1
+CT-104,cooling,supply_air_temp,34.0,degC,2026-07-15T09:15:00Z,White Space Zone C,A1
+CT-105,cooling,return_air_temp,26.2,degC,2026-07-15T09:20:00Z,White Space Zone A,A1
+CT-106,cooling,room_temp,19.4,degC,2026-07-15T09:25:00Z,White Space Zone D,A1
+CT-107,cooling,relative_humidity,45.0,%RH,2026-07-15T09:30:00Z,White Space Zone A,A1
+CT-108,cooling,relative_humidity,72.0,%RH,2026-07-15T09:35:00Z,White Space Zone B,A1
+CT-109,cooling,relative_humidity,88.0,%RH,2026-07-15T09:40:00Z,White Space Zone D,A1
+CT-110,cooling,airflow_rate,3200,cfm,2026-07-15T09:45:00Z,White Space Zone A,A1

@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>SiteMind — Drawing Set</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Diagrams are hand-built static SVG, baked directly into this file — no CDN script, nothing to
+     render at load time, so they work with no network and in restricted in-app viewers. -->
+<style>
+  :root {
+    --paper: #f2f4f5;
+    --card: #ffffff;
+    --rule: #d7dee3;
+    --rule-strong: #b9c3ca;
+    --ink: #131c24;
+    --ink-dim: #56646f;
+    --blueprint: #1c4d78;
+    --blueprint-deep: #0f2d47;
+    --stamp: #b8481f;
+    --stamp-bg: #fbeae2;
+    --verify: #1f7a52;
+    --verify-bg: #e5f3ea;
+    --advisory: #a06a12;
+    --advisory-bg: #fbf0dc;
+    --shadow: 0 1px 2px rgba(15,30,45,0.08), 0 1px 10px rgba(15,30,45,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0c1720; --card: #101f2c; --rule: #223140; --rule-strong: #34495c;
+      --ink: #e4eaee; --ink-dim: #8fa0ac; --blueprint: #6fa8d8; --blueprint-deep: #0a1622;
+      --stamp: #e0774a; --stamp-bg: #2c1911; --verify: #4fd394; --verify-bg: #10281d;
+      --advisory: #e0b23a; --advisory-bg: #2c2210; --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 1px 10px rgba(0,0,0,0.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0c1720; --card: #101f2c; --rule: #223140; --rule-strong: #34495c;
+    --ink: #e4eaee; --ink-dim: #8fa0ac; --blueprint: #6fa8d8; --blueprint-deep: #0a1622;
+    --stamp: #e0774a; --stamp-bg: #2c1911; --verify: #4fd394; --verify-bg: #10281d;
+    --advisory: #e0b23a; --advisory-bg: #2c2210; --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 1px 10px rgba(0,0,0,0.25);
+  }
+  :root[data-theme="light"] {
+    --paper: #f2f4f5; --card: #ffffff; --rule: #d7dee3; --rule-strong: #b9c3ca;
+    --ink: #131c24; --ink-dim: #56646f; --blueprint: #1c4d78; --blueprint-deep: #0f2d47;
+    --stamp: #b8481f; --stamp-bg: #fbeae2; --verify: #1f7a52; --verify-bg: #e5f3ea;
+    --advisory: #a06a12; --advisory-bg: #fbf0dc; --shadow: 0 1px 2px rgba(15,30,45,0.08), 0 1px 10px rgba(15,30,45,0.04);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, sans-serif;
+    line-height: 1.55; font-size: 16px; overflow-x: hidden;
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-attachment: fixed;
+    background-position: -1px -1px;
+    padding-bottom: 76px; /* room for the fixed nav bar */
+  }
+  .mono { font-family: "IBM Plex Mono", monospace; }
+  a { color: var(--blueprint); }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; background: var(--card); border: 1px solid var(--rule); padding: 0.05em 0.4em; border-radius: 3px; }
+  pre { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  pre code { border: none; padding: 0; background: none; }
+  :focus-visible { outline: 2px solid var(--blueprint); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ── Title block (signature element: sticky, doubles as sheet identity + nav) ── */
+  .titleblock {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--blueprint-deep); color: #eef4f8;
+    border-bottom: 2px solid var(--blueprint);
+    padding: 10px 14px 8px;
+  }
+  .titleblock .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .titleblock .brand { font-family: "IBM Plex Mono", monospace; font-weight: 700; letter-spacing: 0.08em; font-size: 0.82rem; }
+  .titleblock .brand .of { opacity: 0.6; font-weight: 400; }
+  .titleblock .sheetcode {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 4px; padding: 2px 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .titleblock .sheetcode:hover { background: rgba(255,255,255,0.18); }
+  .titleblock .sheetcode svg { width: 10px; height: 10px; }
+  .titleblock h1 {
+    font-family: "IBM Plex Mono", monospace; font-size: 1.15rem; font-weight: 600; margin: 6px 0 0;
+    letter-spacing: -0.01em;
+  }
+  .ruler { display: flex; gap: 3px; margin-top: 9px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .ruler::-webkit-scrollbar { display: none; }
+  .ruler button {
+    flex: 0 0 auto; width: 24px; height: 20px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.22);
+    background: transparent; color: rgba(238,244,248,0.55); font-family: "IBM Plex Mono", monospace;
+    font-size: 0.62rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .ruler button.active { background: var(--stamp); border-color: var(--stamp); color: #fff; font-weight: 700; }
+  .ruler button.visited:not(.active) { color: rgba(238,244,248,0.9); border-color: rgba(255,255,255,0.4); }
+
+  /* ── Sheet picker dropdown ── */
+  .picker-backdrop {
+    position: fixed; inset: 0; background: rgba(6,12,18,0.55); z-index: 30;
+    display: none;
+  }
+  .picker-backdrop.open { display: block; }
+  .picker {
+    position: fixed; left: 10px; right: 10px; top: 64px; z-index: 31;
+    background: var(--card); border: 1px solid var(--rule-strong); border-radius: 10px;
+    box-shadow: var(--shadow); max-height: 70vh; overflow-y: auto; padding: 6px;
+  }
+  .picker button {
+    display: flex; width: 100%; align-items: center; gap: 10px; text-align: left;
+    padding: 10px 10px; border-radius: 7px; border: none; background: none; color: var(--ink);
+    font-family: inherit; font-size: 0.92rem; cursor: pointer;
+  }
+  .picker button:hover { background: var(--paper); }
+  .picker button.active { background: var(--verify-bg); color: var(--verify); font-weight: 600; }
+  .picker .code { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--ink-dim); min-width: 42px; }
+  .picker button.active .code { color: var(--verify); }
+
+  /* ── Content area ── */
+  .stage { max-width: 640px; margin: 0 auto; padding: 18px 16px 8px; }
+  .sheet { display: none; animation: fadein 0.18s ease; }
+  .sheet.active { display: block; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--blueprint); font-weight: 600; margin: 0 0 6px;
+  }
+  h2.title { font-size: 1.5rem; margin: 0 0 14px; line-height: 1.25; }
+  h3 { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; margin: 22px 0 8px; color: var(--blueprint); }
+  p { margin: 0 0 10px; }
+  p.lede { color: var(--ink-dim); font-size: 0.96rem; }
+
+  ul.fact, ol.fact { list-style: none; margin: 0 0 12px; padding: 0; }
+  ul.fact li, ol.fact li {
+    position: relative; padding: 3px 0 3px 20px; margin-bottom: 6px; font-size: 0.95rem;
+  }
+  ul.fact li::before { content: "—"; position: absolute; left: 0; color: var(--blueprint); font-weight: 600; }
+  ol.fact { counter-reset: step; }
+  ol.fact li { counter-increment: step; padding-left: 26px; }
+  ol.fact li::before { content: counter(step); position: absolute; left: 0; top: 3px; width: 18px; height: 18px;
+    border-radius: 3px; background: var(--blueprint); color: #fff; font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  ul.fact li strong, ol.fact li strong { color: var(--ink); }
+  ul.fact.tight li, ol.fact.tight li { margin-bottom: 3px; }
+
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; margin: 12px 0; box-shadow: var(--shadow); }
+  .grid { display: grid; gap: 10px; }
+
+  .stamp {
+    display: inline-flex; align-items: center; gap: 5px; font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px; border: 1.5px dashed currentColor;
+  }
+  .stamp.verify { color: var(--verify); background: var(--verify-bg); }
+  .stamp.advisory { color: var(--advisory); background: var(--advisory-bg); }
+  .stamp.open { color: var(--stamp); background: var(--stamp-bg); }
+  .stamp.neutral { color: var(--ink-dim); background: var(--paper); border-style: solid; }
+
+  .stat-strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 14px 0; }
+  .stat-strip .stat { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .stat .n { font-family: "IBM Plex Mono", monospace; font-size: 1.35rem; font-weight: 700; color: var(--blueprint); display: block; }
+  .stat .l { font-size: 0.7rem; color: var(--ink-dim); margin-top: 2px; }
+
+  .quote {
+    border-left: 3px solid var(--stamp); background: var(--stamp-bg); border-radius: 0 8px 8px 0;
+    padding: 10px 14px; margin: 12px 0; font-size: 0.92rem; font-style: italic; color: var(--ink);
+  }
+  .quote cite { display: block; font-style: normal; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem;
+    color: var(--ink-dim); margin-top: 6px; }
+
+  .callout { background: var(--card); border: 1px solid var(--rule-strong); border-left: 3px solid var(--blueprint);
+    border-radius: 0 8px 8px 0; padding: 12px 14px; margin: 14px 0; font-size: 0.92rem; }
+  .callout .lbl { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--blueprint); display: block; margin-bottom: 4px; }
+
+  .diagram-wrap { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 10px;
+    margin: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; text-align: center; }
+  .diagram-wrap svg { width: 100%; max-width: 320px; height: auto; }
+  .diagram-cap { font-size: 0.76rem; color: var(--ink-dim); margin-top: 8px; }
+  .diagram-cap .solid-swatch, .diagram-cap .dashed-swatch { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--blueprint); vertical-align: middle; margin-right: 3px; }
+  .diagram-cap .dashed-swatch { border-top-style: dashed; border-color: var(--ink-dim); }
+
+  /* ── Static hand-built diagrams (no runtime rendering, no CDN, no network needed) ── */
+  .svgd .box { fill: var(--card); stroke: var(--rule-strong); stroke-width: 1.5; }
+  .svgd .box.decision { stroke: var(--blueprint); stroke-width: 2; }
+  .svgd .box.data { fill: var(--paper); stroke: var(--blueprint); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .svgd .lbl { fill: var(--ink); font-family: "IBM Plex Mono", monospace; font-size: 11px; text-anchor: middle; }
+  .svgd .lbl-sm { fill: var(--ink-dim); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-anchor: middle; }
+  .svgd .arrow { stroke: var(--blueprint); stroke-width: 1.8; fill: none; }
+  .svgd .arrow-dashed { stroke: var(--ink-dim); stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; }
+
+  .kv { border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 12px 0; }
+  .kv .r { display: flex; border-bottom: 1px solid var(--rule); font-size: 0.88rem; }
+  .kv .r:last-child { border-bottom: none; }
+  .kv .k { flex: 0 0 40%; padding: 8px 10px; background: var(--card); color: var(--ink-dim); font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; }
+  .kv .v { flex: 1; padding: 8px 10px; background: var(--paper); }
+
+  .filetree { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; line-height: 1.75; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; white-space: pre; }
+  .filetree .dir { color: var(--blueprint); font-weight: 600; }
+  .filetree .comment { color: var(--ink-dim); }
+
+  .readlist { list-style: none; margin: 0; padding: 0; }
+  .readlist li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+    padding: 9px 0; border-bottom: 1px dashed var(--rule); font-size: 0.9rem; }
+  .readlist li:last-child { border-bottom: none; }
+  .readlist .q { color: var(--ink-dim); }
+
+  /* ── Bottom stepper bar ── */
+  .stepper {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--card); border-top: 1px solid var(--rule-strong);
+    display: flex; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    gap: 8px; box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+  }
+  .stepper button {
+    flex: 1; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600;
+    padding: 11px 10px; border-radius: 7px; border: 1px solid var(--rule-strong); background: var(--paper);
+    color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .stepper button:disabled { opacity: 0.35; cursor: default; }
+  .stepper button.primary { background: var(--blueprint); color: #fff; border-color: var(--blueprint); }
+
+  @media (min-width: 720px) {
+    .stage { padding-top: 26px; }
+    .titleblock h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="row1">
+    <div class="brand">SITEMIND <span class="of">— DRAWING SET</span></div>
+    <button class="sheetcode" id="sheetPickerBtn" aria-haspopup="true" aria-expanded="false">
+      <span id="sheetCodeLabel">SM-00</span> / 14
+      <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </div>
+  <h1 id="sheetTitleLabel">Cover &amp; the problem</h1>
+  <div class="ruler" id="ruler"></div>
+</div>
+
+<div class="picker-backdrop" id="pickerBackdrop"></div>
+<div class="picker" id="picker" role="menu" aria-label="Jump to sheet"></div>
+
+<div class="stage" id="stage">
+
+<!-- SM-00 -->
+<section class="sheet" data-code="SM-00" data-title="Cover &amp; the problem" id="s-cover">
+  <p class="eyebrow">ET AI Hackathon 2026 — Problem #4</p>
+  <h2 class="title">An AI intelligence platform for data-centre EPC delivery</h2>
+  <div class="stat-strip">
+    <div class="stat"><span class="n">5</span><span class="l">AI pillars, one connected project</span></div>
+    <div class="stat"><span class="n">21</span><span class="l">eval scripts, never blended</span></div>
+    <div class="stat"><span class="n">0%</span><span class="l">hallucinated citations (measured)</span></div>
+    <div class="stat"><span class="n">24</span><span class="l">real, clickable IS/CEA clauses</span></div>
+  </div>
+  <h3>The problem, in the brief's own numbers</h3>
+  <ul class="fact">
+    <li><strong>~$15B</strong> of India data-centre capex by 2027 — capacity going from ~900 MW (2024) to 2,700+ MW.</li>
+    <li><strong>67%</strong> of APAC data-centre EPC projects overran schedule by more than 10% (Turner &amp; Townsend, 2024).</li>
+    <li>The brief names the leading causes directly: <strong>procurement misalignment</strong> and <strong>commissioning failures</strong>.</li>
+    <li>Specs, submittals, RFIs, schedule, procurement status, and quality records live in disconnected systems — "the intelligence to connect them never gets built."</li>
+  </ul>
+  <div class="quote">
+    SiteMind reads a project's documents, checks every extractable parameter against a real digitised
+    Indian standard, and connects the findings across schedule, procurement, and commissioning into one
+    live picture — instead of five disconnected tools each guessing on their own.
+    <cite>— what this project actually does, one sentence</cite>
+  </div>
+
+  <h3>The brief's suggested tech, honestly scored</h3>
+  <p><span class="stamp verify">Built</span> Specification &amp; Quality Compliance Agent — structural + electrical domains, live.</p>
+  <p><span class="stamp verify">Built</span> Predictive Schedule Risk Engine, incl. mitigation options — CPM + 3 specialist agents.</p>
+  <p><span class="stamp advisory">Partial</span> Agentic AI / Multi-Agent Systems — real, but bounded to one module (schedule mitigation), not the whole platform.</p>
+  <p><span class="stamp advisory">Partial</span> Geospatial visibility — a real Leaflet map, but over synthetic shipments, no live carrier feed.</p>
+  <p><span class="stamp open">Absent</span> Computer Vision — parses document prose today, not drawings; a stated "what's next," not a claim.</p>
+  <p><span class="stamp open">Absent</span> QMS integration (Aconex/SAP/Procore) — an internal NCR trail exists, no external system hook yet.</p>
+</section>
+
+<!-- SM-01 -->
+<section class="sheet" data-code="SM-01" data-title="The core idea" id="s-thesis">
+  <p class="eyebrow">Sheet 01 — Thesis</p>
+  <h2 class="title">The LLM never decides</h2>
+  <p class="lede">The one sentence to remember if you remember nothing else.</p>
+  <ul class="fact">
+    <li>Every pass/fail is a <strong>deterministic Python threshold</strong>, evaluated against a real, verbatim clause.</li>
+    <li>The LLM is handed the clause and the decision <strong>after</strong> it's already made — it only writes the explanation.</li>
+    <li>Result: a hallucination rate you can actually <strong>measure and publish</strong>, not a "trust me."</li>
+  </ul>
+  <div class="diagram-wrap">
+    <svg class="svgd" viewBox="0 0 300 390" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Flow: document or question comes in, retrieval finds the real clause, a deterministic threshold check decides, the LLM writes prose only, producing a cited answer with the clause attached.">
+      <defs>
+        <marker id="ah1" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--blueprint)"/>
+        </marker>
+      </defs>
+      <rect class="box" x="30" y="8" width="240" height="48" rx="8"/>
+      <text class="lbl" x="150" y="29"><tspan x="150" dy="0">Document or</tspan><tspan x="150" dy="14">question comes in</tspan></text>
+      <line class="arrow" x1="150" y1="56" x2="150" y2="82" marker-end="url(#ah1)"/>
+
+      <rect class="box" x="30" y="84" width="240" height="48" rx="8"/>
+      <text class="lbl" x="150" y="105"><tspan x="150" dy="0">Retrieval finds</tspan><tspan x="150" dy="14">the real clause</tspan></text>
+      <line class="arrow" x1="150" y1="132" x2="150" y2="158" marker-end="url(#ah1)"/>
+
+      <rect class="box decision" x="30" y="160" width="240" height="52" rx="8"/>
+      <text class="lbl" x="150" y="181"><tspan x="150" dy="0">Deterministic</tspan><tspan x="150" dy="14">threshold check — decides</tspan></text>
+      <line class="arrow" x1="150" y1="212" x2="150" y2="238" marker-end="url(#ah1)"/>
+
+      <rect class="box" x="30" y="240" width="240" height="48" rx="8"/>
+      <text class="lbl" x="150" y="261"><tspan x="150" dy="0">LLM writes</tspan><tspan x="150" dy="14">prose ONLY</tspan></text>
+      <line class="arrow" x1="150" y1="288" x2="150" y2="314" marker-end="url(#ah1)"/>
+
+      <rect class="box" x="30" y="316" width="240" height="56" rx="8"/>
+      <text class="lbl" x="150" y="340"><tspan x="150" dy="0">Cited answer,</tspan><tspan x="150" dy="14">clause attached</tspan></text>
+    </svg>
+    <p class="diagram-cap">Top to bottom: the decision (highlighted box) is made before the LLM ever runs.</p>
+  </div>
+  <div class="callout">
+    <span class="lbl">Why this is harder, not easier</span>
+    Building real retrieval + real threshold logic costs more than hoping a model gets it right — the
+    payoff is a decision you can audit, not just a plausible-sounding one.
+  </div>
+</section>
+
+<!-- SM-02 -->
+<section class="sheet" data-code="SM-02" data-title="System architecture" id="s-arch">
+  <p class="eyebrow">Sheet 02 — Architecture</p>
+  <h2 class="title">Three processes, two off-by-default flags</h2>
+  <ul class="fact">
+    <li><strong>Frontend</strong> — Next.js Command Center, port 3000.</li>
+    <li><strong>Backend</strong> — FastAPI, port 8000, the deterministic decision layer + prose-only LLM.</li>
+    <li><strong>Codebook</strong> — standalone standards microservice, port 8010, MCP + REST.</li>
+    <li>Each starts separately, in its own terminal — see Sheet 07 for the exact commands.</li>
+  </ul>
+  <div class="diagram-wrap">
+    <svg class="svgd" viewBox="0 0 320 300" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Architecture: browser talks to the FastAPI backend, which runs the deterministic decision layer against real clauses and project data. The backend also holds llm.py for prose only, connected by a dashed line, and talks to the Codebook service over MCP or REST, which also reaches the same data.">
+      <defs>
+        <marker id="ah2" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--blueprint)"/>
+        </marker>
+        <marker id="ah2d" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--ink-dim)"/>
+        </marker>
+      </defs>
+
+      <rect class="box" x="20" y="8" width="190" height="44" rx="8"/>
+      <text class="lbl" x="115" y="27"><tspan x="115" dy="0">Browser</tspan><tspan x="115" dy="14">Next.js :3000</tspan></text>
+      <line class="arrow" x1="115" y1="52" x2="115" y2="76" marker-end="url(#ah2)"/>
+
+      <rect class="box" x="20" y="78" width="190" height="48" rx="8"/>
+      <text class="lbl" x="115" y="99"><tspan x="115" dy="0">FastAPI backend</tspan><tspan x="115" dy="14">:8000</tspan></text>
+      <line class="arrow" x1="115" y1="126" x2="115" y2="150" marker-end="url(#ah2)"/>
+
+      <rect class="box" x="20" y="152" width="190" height="52" rx="8"/>
+      <text class="lbl" x="115" y="173"><tspan x="115" dy="0">Deterministic</tspan><tspan x="115" dy="14">decision layer</tspan></text>
+      <line class="arrow" x1="115" y1="204" x2="115" y2="228" marker-end="url(#ah2)"/>
+
+      <rect class="box data" x="20" y="230" width="190" height="54" rx="8"/>
+      <text class="lbl" x="115" y="251"><tspan x="115" dy="0">Real clauses +</tspan><tspan x="115" dy="14">project data</tspan></text>
+
+      <rect class="box" x="222" y="78" width="88" height="40" rx="7"/>
+      <text class="lbl-sm" x="266" y="94"><tspan x="266" dy="0">Codebook</tspan><tspan x="266" dy="12">:8010</tspan></text>
+      <line class="arrow-dashed" x1="210" y1="98" x2="220" y2="98" marker-end="url(#ah2d)"/>
+
+      <rect class="box" x="222" y="152" width="88" height="40" rx="7"/>
+      <text class="lbl-sm" x="266" y="168"><tspan x="266" dy="0">llm.py</tspan><tspan x="266" dy="12">prose only</tspan></text>
+      <line class="arrow-dashed" x1="210" y1="172" x2="220" y2="172" marker-end="url(#ah2d)"/>
+
+      <path class="arrow-dashed" d="M266,118 L266,257 L212,257" marker-end="url(#ah2d)"/>
+    </svg>
+    <p class="diagram-cap"><span class="solid-swatch"></span>real request flow &nbsp; <span class="dashed-swatch"></span>supporting / prose-only link</p>
+  </div>
+  <p class="lede">Full node-by-node diagram: <code>docs/ARCHITECTURE.md</code>.</p>
+</section>
+
+<!-- SM-03 -->
+<section class="sheet" data-code="SM-03" data-title="The five pillars" id="s-pillars">
+  <p class="eyebrow">Sheet 03 — Pillars</p>
+  <h2 class="title">One project, five AI capabilities over it</h2>
+  <p class="lede"><strong>DC1</strong> — a fictional 48 MW Tier III data centre in Chennai.</p>
+
+  <div class="card">
+    <span class="stamp verify">Hero</span>
+    <h3 style="margin-top:8px">Compliance Agent</h3>
+    <ul class="fact tight">
+      <li>Extracts each parameter with its exact source sentence.</li>
+      <li>Checks it against a real cited IS clause (structural + electrical).</li>
+      <li>Emits NCRs plus senior "ADVISORY" judgment calls it won't force a verdict on.</li>
+    </ul>
+    <p class="lede"><code>/compliance</code> · <code>agents/compliance.py</code>, <code>agents/checks.py</code></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Project / RFI Copilot</h3>
+    <ul class="fact tight">
+      <li>Cited hybrid retrieval (BM25 + dense, RRF-fused).</li>
+      <li>Flags "this was asked before" against the RFI log.</li>
+    </ul>
+    <p class="lede"><code>/copilot</code> · <code>agents/copilot.py</code></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Predictive Schedule Risk</h3>
+    <ul class="fact tight">
+      <li>CPM recomputation + leading-indicator rules (vendor slip, progress lag, monsoon/Pongal windows).</li>
+      <li>Generates real mitigation <strong>options</strong>, not just alerts.</li>
+    </ul>
+    <p class="lede"><code>/schedule</code> · <code>schedule.py</code>, <code>agents/mitigation.py</code></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Supply Chain Visibility &amp; Risk</h3>
+    <ul class="fact tight">
+      <li>Multi-tier delay propagation + root-cause attribution (e.g. a tier-2 customs delay, not just "vendor is late").</li>
+      <li>Computed alternative-supplier viability + equipment-spec compliance (IS 8623-1).</li>
+    </ul>
+    <p class="lede"><code>/supply-chain</code> · <code>supply_chain.py</code></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Commissioning QA Copilot</h3>
+    <ul class="fact tight">
+      <li>Cooling-only slice (electrical/fire deliberately deferred).</li>
+      <li>Deterministic PASS / within-allowable / FAIL vs a cited thermal envelope, real NCRs.</li>
+    </ul>
+    <p class="lede"><code>/commissioning</code> · <code>commissioning.py</code></p>
+  </div>
+
+  <div class="callout">
+    <span class="lbl">The thread that ties them together</span>
+    RFI-EL-112 ↔ Supply Chain's SHP-002 ↔ a Schedule activity ↔ an equipment-spec check — one real
+    example, computed live from a shared key, never typed into a slide.
+  </div>
+</section>
+
+<!-- SM-04 -->
+<section class="sheet" data-code="SM-04" data-title="Supporting infrastructure" id="s-infra">
+  <p class="eyebrow">Sheet 04 — Infrastructure</p>
+  <h2 class="title">What makes the pillars work</h2>
+
+  <div class="card">
+    <span class="stamp verify">Built &amp; live</span>
+    <h3 style="margin-top:8px">Codebook</h3>
+    <ul class="fact tight">
+      <li>Standalone MCP-consumable standards service — 17 docs / 6,206 chunks structural.</li>
+      <li>The scalability story: breadth grows by adding corpora, never by retraining.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="stamp verify">Built</span>
+    <h3 style="margin-top:8px">Codebook Console</h3>
+    <ul class="fact tight">
+      <li>Browsing UI over Codebook's REST API — corpora list, provenance badges, drag-and-drop upload.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="stamp open">Documented debt</span>
+    <h3 style="margin-top:8px">Knowledge Base</h3>
+    <ul class="fact tight">
+      <li>Older retrieval package, predates Codebook — kept alive only because 2 evals still import it.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="stamp verify">Built</span>
+    <h3 style="margin-top:8px">Knowledge Graph</h3>
+    <ul class="fact tight">
+      <li>Equipment → spec → standard → RFI, built from real structured data — no LLM or embeddings involved.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SM-05 -->
+<section class="sheet" data-code="SM-05" data-title="The honesty model" id="s-honesty">
+  <p class="eyebrow">Sheet 05 — Honesty model</p>
+  <h2 class="title">The actual moat</h2>
+  <ul class="fact">
+    <li><strong>Never invent a clause.</strong> Every citation resolves to real fetched text, never paraphrased from memory.</li>
+    <li><strong>Decisions in Python, not the LLM</strong> — restated because it's load-bearing.</li>
+    <li><strong>No asserted numbers.</strong> Every metric shown is a real computed run, re-checkable live.</li>
+    <li><strong>No ML training anywhere.</strong> AI engineering — retrieval + deterministic logic — not a trained model.</li>
+  </ul>
+  <h3>Citation trust tiers — stamped, not blended</h3>
+  <p><span class="stamp verify">codebook_verified</span> the gold standard, via the Codebook pipeline.</p>
+  <p><span class="stamp neutral">primary_native_pdf</span> real doc, clean current PDF, no OCR risk.</p>
+  <p><span class="stamp advisory">primary_scan_ocr</span> real doc, older scan — OCR + edition caveats.</p>
+  <p><span class="stamp advisory">cross_source_unverified</span> compiled from secondary sources, primary is paywalled (e.g. ASHRAE).</p>
+  <h3>Real vs representative</h3>
+  <ul class="fact tight">
+    <li><strong>Real:</strong> every clause citation, the decision logic, all 21 evals, document ingestion, CPM recomputation.</li>
+    <li><strong>Representative:</strong> DC1's project, documents, RFIs, and schedule are synthetic — modelled on real public Indian DC tenders, disclosed as such.</li>
+  </ul>
+</section>
+
+<!-- SM-06 -->
+<section class="sheet" data-code="SM-06" data-title="The eval suite" id="s-evals">
+  <p class="eyebrow">Sheet 06 — Evals</p>
+  <h2 class="title">21 scripts, never blended into one score</h2>
+  <div class="stat-strip">
+    <div class="stat"><span class="n">18</span><span class="l">distinct harnesses, backend/eval/</span></div>
+    <div class="stat"><span class="n">3</span><span class="l">more, in Codebook's own eval/</span></div>
+  </div>
+  <ul class="fact">
+    <li>2 of the 3 Codebook-service scripts repoint near-duplicate backend logic at the relocated corpus — re-verification, not new tests.</li>
+    <li>The 3rd, <code>run_codebook_tools_eval.py</code> (30/30), is genuinely distinct — it drives the live MCP protocol.</li>
+  </ul>
+  <h3>Honest caveats about the suite itself</h3>
+  <ul class="fact tight">
+    <li>Several rule-engine evals grade against gold labels derived from the same thresholds they test.</li>
+    <li>Most test sets are small (n=5–14) and self-authored, not independently written.</li>
+    <li>The Copilot's abstention floor is tuned on the same set that evaluates it.</li>
+    <li>Nothing backtests against real historical project outcomes yet.</li>
+  </ul>
+</section>
+
+<!-- SM-07 -->
+<section class="sheet" data-code="SM-07" data-title="How to run it" id="s-run">
+  <p class="eyebrow">Sheet 07 — Run it</p>
+  <h2 class="title">Fully offline by default</h2>
+  <h3>Three processes, one terminal each</h3>
+  <pre><code>cd backend &amp;&amp; ./run.sh
+cd frontend &amp;&amp; npm install &amp;&amp; npm run dev
+cd standards-service &amp;&amp; ./run.sh</code></pre>
+  <h3>Run an eval</h3>
+  <pre><code>cd backend &amp;&amp; source .venv/bin/activate
+python -m eval.run_eval            # n=41
+python -m eval.run_electrical_eval # n=32</code></pre>
+</section>
+
+<!-- SM-08 -->
+<section class="sheet" data-code="SM-08" data-title="Current status" id="s-status">
+  <p class="eyebrow">Sheet 08 — Status</p>
+  <h2 class="title">Recently hardened</h2>
+  <ul class="fact">
+    <li><strong>Citation reachability</strong> — all 13 previously-dead links now resolve to confirmed-live BIS pages; all 24 citations verifiable.</li>
+    <li><strong>Doc consistency</strong> — fixed a contradiction between docs on eval independence; now phrased consistently everywhere as "18 distinct + 3 more (2 repointed)."</li>
+    <li><strong>Demo narrative</strong> — added an explicit 5-minute cut, consolidated five scattered disclosures into one up-front statement, pre-wrote answers to the 10 hardest judge questions.</li>
+    <li><strong>Business case</strong> — added a labeled sensitivity band (not a forecast) and owned the "no real project to backtest against" gap in writing, with a pilot design.</li>
+    <li><strong>New reference docs</strong> — competitive positioning, personas, a demo runbook, a judge one-pager.</li>
+  </ul>
+</section>
+
+<!-- SM-09 -->
+<section class="sheet" data-code="SM-09" data-title="The demo story" id="s-demo">
+  <p class="eyebrow">Sheet 09 — Demo story</p>
+  <h2 class="title">One project, five pillars, one continuous thread</h2>
+  <p class="lede"><strong>DC1</strong> — 48 MW Tier III (N+1), Chennai, for an unnamed hyperscale operator (kept generic on purpose). Four contractors:</p>
+  <ul class="fact tight">
+    <li><strong>Structural</strong> — L&amp;T Construction — DBR, foundation drawings, rebar</li>
+    <li><strong>Architecture/Fire</strong> — Tata Projects — raised floor, roof cladding, fire-stopping</li>
+    <li><strong>Mechanical</strong> — Voltas — CRAH units (N+1 cooling)</li>
+    <li><strong>Electrical</strong> — Sterling &amp; Wilson — DRUPS, LV switchgear, busway</li>
+  </ul>
+  <p class="lede">Real Indian EPC/MEP companies, used illustratively in synthetic demo data — not an actual relationship.</p>
+
+  <h3>Say this once, up front</h3>
+  <div class="quote">
+    Everything you're about to see is a real computation over a disclosed representative dataset — the
+    project, its documents, and its schedule are synthetic, modelled on real public Indian data-centre
+    tenders; the standards citations, the pass/fail logic, and every eval number are real. Happy to show
+    exactly where that line sits, at any point.
+  </div>
+
+  <h3>The innovation thesis — say it, don't just build it</h3>
+  <div class="quote">
+    The LLM never decided anything you just saw — it only ever explained what the code already proved.
+  </div>
+
+  <h3>Act 1 — Compliance Agent catches what a human would take days to find</h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>Check on <strong>DC1-02-DBR-0001-R2</strong>: 10 parameters checked, <strong>6 NCRs</strong> (3 HIGH / 2 MEDIUM / 1 ADVISORY), 4 conforming.</li>
+      <li>Headline: L&amp;T's shop drawing shows <strong>30mm cover</strong> on footing F-12 — IS 456 Cl. 26.4.2.2 requires <strong>50mm minimum</strong>.</li>
+      <li>Matches two real open RFIs already in the log (RFI-CIV-073 cover question, RFI-CIV-072 grade question) — SiteMind would've caught both before either was raised.</li>
+      <li><strong>ADVISORY:</strong> DBR uses seismic I=1.0; RFI-STR-068 already asks if a Tier III lifeline facility should use I=1.5 (IS 1893 Cl. 7.2.3 / 6.4.2) — SiteMind surfaces the same question, doesn't force a verdict.</li>
+    </ul>
+  </div>
+
+  <h3>Act 2 — that NCR has a real cost</h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>Overview computes ROI across all 4 measurable pillars: 6 open Compliance issues → 120 engineer-hours + ₹90L rework avoided.</li>
+      <li>Cost-at-Risk panel: <code>schedule_delay_cost + expedite_premium_cost + rework_exposure</code>, every input shown.</li>
+    </ul>
+  </div>
+
+  <h3>Act 3 — the electrical package, same pattern</h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>RFI-EL-112: LV switchgear lead time slipping ~6 weeks, logged against Schedule DC1-04-EL-030, 28-day impact.</li>
+      <li>Same WBS id as Supply Chain's SHP-002 (LV switchgear 4000A) — root cause: tier-1 supplier slipped 20 days.</li>
+      <li>Equipment-spec check: 415V/1000V rating verified against IS 8623-1 Cl. 4.1.2 — <strong>MATCH</strong>.</li>
+      <li>The SHP-002 ↔ RFI-EL-112 join is computed live and shown as a clickable chip — one package flagged on 4 independent axes.</li>
+    </ul>
+  </div>
+
+  <h3>Act 4 — cooling commissioning <span class="stamp open">backup beat</span></h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>Upload the sample log: 6 real test records vs the ASHRAE TC9.9 thermal envelope.</li>
+      <li>Zone C <strong>FAIL</strong> (34.0°C supply air), Zone B within-allowable-but-outside-recommended.</li>
+      <li>Caveat said plainly every time: cross-source-compiled, not manak-verified — ASHRAE's book is paywalled.</li>
+    </ul>
+  </div>
+
+  <h3>Act 5 — live upload, never seen before</h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li><strong>Generator-Earthing-Addendum.docx:</strong> frame earthed by 1 connection (needs 2 — HIGH NCR), neutral the same (HIGH NCR), 2.5Ω earth-grid resistance (IS 3043 caps at 1.0Ω — HIGH NCR), 25mA RCD conforming.</li>
+      <li><strong>Generator-Plinth-Shop-Drawing.docx:</strong> 35mm cover on footing G-04 trips the same overlap-resolution logic as Act 1's F-12 finding.</li>
+    </ul>
+  </div>
+
+  <h3>Act 6 — the simulated clock</h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>Advance +14 / +20 days: at-risk count, <code>advance_warning_days</code>, and alternative-supplier viability all visibly change live.</li>
+      <li>Reset restores the exact baseline — nothing in the underlying data changes, only time passing does.</li>
+    </ul>
+  </div>
+
+  <h3>Act 7 — Codebook <span class="stamp open">one sentence live, not a full beat</span></h3>
+  <div class="card">
+    <ul class="fact tight">
+      <li>Same trust engine, packaged as a standalone MCP-consumable service any agent can call.</li>
+      <li>Four panels: Corpora, Search, Clause lookup, Document check (30/30 held-out eval).</li>
+    </ul>
+  </div>
+
+  <h3>The 5-minute cut <span class="stamp verify">use this</span></h3>
+  <ol class="fact tight">
+    <li>Compliance + open-RFI match — 90s</li>
+    <li>ROI / Cost-at-Risk — 30s</li>
+    <li>Supply-chain thread + evidence chip — 90s</li>
+    <li>Live upload, one HIGH NCR — 60s</li>
+    <li>Clock advance — 20s</li>
+    <li>ADVISORY close + one-line Codebook mention — 30s</li>
+  </ol>
+  <p class="lede">Commissioning (Act 4) and the full Codebook walkthrough (Act 7) are backup beats — pull up only if there's time or a judge asks.</p>
+
+  <h3>Full narration order — ≈9–10 min, if the slot has room</h3>
+  <ol class="fact tight">
+    <li>Compliance — 2 min</li>
+    <li>Overview ROI + Cost-at-Risk — 45s</li>
+    <li>Supply Chain — 2 min</li>
+    <li>Commissioning — 1.5 min</li>
+    <li>Live upload — 1.5 min</li>
+    <li>Codebook — 1 min</li>
+    <li>Simulated clock — 30s</li>
+    <li>Close on the ADVISORY — 30s</li>
+  </ol>
+
+  <div class="callout">
+    <span class="lbl">Full script, word for word</span>
+    <code>DEMO_STORY.md</code> (this sheet's source) and <code>docs/TELEPROMPTER.md</code> (the spoken
+    version) — both internal build docs, excluded from git history on purpose but live on disk.
+  </div>
+</section>
+
+<!-- SM-10 -->
+<section class="sheet" data-code="SM-10" data-title="Business impact" id="s-impact">
+  <p class="eyebrow">Sheet 10 — Business impact</p>
+  <h2 class="title">Anchored to the brief's own cited figures</h2>
+  <p class="lede">No invented project-level $ projection — every number below is either a real computed run or a labeled assumption.</p>
+
+  <h3>The brief's own numbers</h3>
+  <ul class="fact tight">
+    <li>India DC capacity: ~900 MW (2024) → 2,700+ MW (2027), $15B+ capital deployment.</li>
+    <li>67% of APAC data-centre EPC projects overran schedule &gt;10% (Turner &amp; Townsend, 2024).</li>
+    <li>Named leading causes: <strong>procurement misalignment</strong> and <strong>commissioning failures</strong>.</li>
+  </ul>
+
+  <h3>Cause → pillar → what it actually does</h3>
+  <div class="kv">
+    <div class="r"><div class="k">Spec/quality deviations</div><div class="v">Compliance Agent — catches before casting/procurement approval, cited to a real IS clause</div></div>
+    <div class="r"><div class="k">Procurement misalignment</div><div class="v">Supply Chain — multi-tier tracking + root cause + real alternative-supplier arithmetic</div></div>
+    <div class="r"><div class="k">Commissioning failures</div><div class="v">Commissioning QA — deterministic PASS/allowable/FAIL, real NCRs (cooling-only; electrical/fire deferred)</div></div>
+    <div class="r"><div class="k">Schedule risk</div><div class="v">Predictive Schedule Risk — CPM + leading indicators, measured lead-time-of-warning</div></div>
+    <div class="r"><div class="k">Fragmented knowledge</div><div class="v">Copilot — cited RAG + seen-before-RFI detection</div></div>
+  </div>
+
+  <h3>Real, computed numbers (not projections)</h3>
+  <div class="stat-strip">
+    <div class="stat"><span class="n">6</span><span class="l">NCRs caught, 0 hallucinated citations</span></div>
+    <div class="stat"><span class="n">6</span><span class="l">schedule activities flagged at-risk</span></div>
+    <div class="stat"><span class="n">2/6</span><span class="l">shipments flagged at-risk</span></div>
+    <div class="stat"><span class="n">21/21</span><span class="l">eval scripts passing</span></div>
+  </div>
+
+  <h3>Unit economics — labeled assumptions, not measurements</h3>
+  <ul class="fact tight">
+    <li>~20 engineer-hours saved per issue caught early (manual cross-check + hand-written NCR) — a conservative round estimate.</li>
+    <li>~₹15 lakh (≈$18K) average rework/avoidance cost per non-conformance caught before casting — a stated estimate.</li>
+  </ul>
+
+  <h3>Illustrative scenario band — sensitivity, not a forecast</h3>
+  <p class="lede"><strong>IF</strong> a project at the brief's scale (15k–40k line items, 200 contractors) surfaces <strong>50–200 catchable non-conformances</strong> [assumption, stated]:</p>
+  <div class="stat-strip">
+    <div class="stat"><span class="n">1,000–4,000</span><span class="l">engineer-hours saved</span></div>
+    <div class="stat"><span class="n">₹7.5–30 Cr</span><span class="l">rework exposure avoided</span></div>
+  </div>
+  <p class="lede">State the assumption out loud every time — it's the one input nobody has real data to pin down yet.</p>
+
+  <h3>The lead-time-vs-actuals gap, stated head-on</h3>
+  <div class="callout">
+    <span class="lbl">No real project to backtest against</span>
+    Provable today: CPM recomputation is real, leading-indicator rules are real and eval'd,
+    <code>detected_lead_time_days = lead_time_days × 0.15</code> is a real formula for the vendor-slip
+    rule. What a 90-day pilot would measure: warning date vs. actual slip date, per flagged activity,
+    across enough activities to report a real distribution.
+  </div>
+
+  <h3>Who pays</h3>
+  <p>Per-project SaaS license to the EPC contractor or owner's-engineer, priced per active project — one
+  avoided rework event at ~₹15L already covers a meaningful share of a year's licensing.</p>
+
+  <h3>For the pitch</h3>
+  <ul class="fact tight">
+    <li>Lead with the causal mapping — built <em>against the brief's own diagnosis</em>, not a feature list.</li>
+    <li>Present the scenario band labeled exactly as sensitivity, never as a projection.</li>
+    <li>Never state an unprompted project-level $ or % claim — give the unit economics and let the room multiply.</li>
+  </ul>
+</section>
+
+<!-- SM-11 -->
+<section class="sheet" data-code="SM-11" data-title="Deck outline" id="s-deck">
+  <p class="eyebrow">Sheet 11 — Deck outline, full detail</p>
+  <h2 class="title">16 slides, every talking point</h2>
+  <p class="lede">Innovation 25 / Business Impact 25 / Technical Excellence 20 / Scalability 15 / UX 15 — nothing on the deck without a reason. Target runtime ≈7:15.</p>
+
+  <div class="card">
+    <p class="lede"><strong>1 · Title + hook</strong> · 0:00–0:15 · <span class="stamp neutral">Business Impact</span></p>
+    <ul class="fact tight">
+      <li>Say it in one line, the brief's own numbers, nothing invented: "India is building $15B of data-centre capacity by 2027. 67% of these projects overrun schedule by more than 10% — and the brief names the two leading causes: procurement misalignment and commissioning failures."</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>2 · The information-fragmentation problem</strong> · 0:15–0:35 · <span class="stamp neutral">Business Impact</span></p>
+    <ul class="fact tight">
+      <li>Specs, submittals, RFIs, schedules, procurement status, quality records: disconnected systems.</li>
+      <li>SiteMind is one living intelligence layer over all of it — not a chatbot over documents, a decision layer.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>3 · The credibility thesis, stated up front</strong> · 0:35–0:55 · <span class="stamp neutral">Innovation + Tech Excellence</span></p>
+    <ul class="fact tight">
+      <li>"Every citation resolves to real, verbatim digitised Indian standard text. Every pass/fail decision is plain Python, not an LLM guess. If we can't verify it, we don't claim it."</li>
+      <li>This is the one idea worth repeating three times in the deck — the actual differentiator, not a feature list.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>4 · Live demo — Compliance Agent, the hero</strong> · 0:55–1:55 · <span class="stamp neutral">Innovation + Tech + UX</span></p>
+    <ul class="fact tight">
+      <li>Upload a real DBR (or use the pre-loaded one) → real extraction with source spans.</li>
+      <li>NCRs cited to real IS 456/875/1893 clauses, plus a second electrical domain (IS 732/3043/CEA/8623 — held out of the demo baseline but eval-proven, 32/32).</li>
+      <li>The IS 1893 I=1.5 judgment-catch ADVISORY: "a Tier-III/IV DC is arguably a lifeline facility... confirm with EOR" — cited to <em>both</em> governing clauses.</li>
+      <li>Click a citation → the real clause opens, with a source-type provenance badge (codebook-verified / primary native PDF / primary OCR scan / cross-source compiled — never presented as equivalent).</li>
+      <li>Action Brief: a confidence enum, never a fabricated %, real RFI/schedule links or an honest "none found."</li>
+      <li>Document register carries a compact A–E status-code legend (real AEC submittal-review codes); titles no longer state checked parameter values — a de-rigged fix with zero effect on the 10-checked / 6-findings / 4-conforming baseline.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>5 · Live demo — a document SiteMind has never seen</strong> · 1:55–2:20 · <span class="stamp neutral">Innovation + Tech</span></p>
+    <ul class="fact tight">
+      <li>The pre-loaded DBR could look memorised — upload one of the two new real <code>.docx</code> files instead.</li>
+      <li>Generator-earthing addendum → 3 real HIGH NCRs (under-earthed frame, under-earthed neutral, high earth-grid resistance — each cited to a real CEA/IS 3043 clause) + 1 conforming reading.</li>
+      <li>Or the generator-plinth shop drawing → its 35mm footing cover trips the <em>same</em> overlap-resolution logic as the F-12 finding on slide 4.</li>
+      <li>Both documents continue the same generator/DRUPS story already on screen — not a disconnected new example.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>6 · Live demo — Schedule Risk + Multi-Agent Mitigation</strong> · 2:20–3:05 · <span class="stamp neutral">Innovation + Tech + Impact</span></p>
+    <ul class="fact tight">
+      <li>CPM + leading-indicator rules, a real re-computed project-finish impact — not asserted, float correctly absorbs slips on non-critical activities.</li>
+      <li>This is the literal answer to the brief's own words: its Predictive Schedule Risk Engine bullet is the only place the brief names multi-agent specifically — "generating mitigation options, not just alerts."</li>
+      <li>Click a flagged risk → three specialist agents fire: a procurement-alternative check (reuses Supply Chain's real viability arithmetic), a resequencing/float check (real CPM float), a resource/overtime-recovery check (real productivity-rate math).</li>
+      <li>A plain coordinator collects every result, including the ones that come back non-viable, transparently.</li>
+      <li>State plainly: this is a <strong>bounded</strong> multi-agent system, not a planning-loop framework — each agent is one real tool-call over data already in-process, not LLM reasoning.</li>
+      <li>If pressed on why three deterministic functions count as "agents": name the pattern precisely — specialist/coordinator, software-engineering sense, not the autonomous-planning-loop sense.</li>
+      <li>On the Gantt: every at-risk activity shows a ghost baseline bar beneath its predicted bar, with a <code>+Nd</code> slip label and a short causal driver phrase — the slip is visible, not just listed in a side panel.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>7 · Live demo — Supply Chain Visibility, Alerts &amp; Evidence Linking</strong> · 3:05–3:50 · <span class="stamp neutral">Innovation + Impact</span></p>
+    <ul class="fact tight">
+      <li>This directly answers the brief's "procurement misalignment" cause.</li>
+      <li>Alerts panel (in-app, severity-tiered, <code>advance_warning_days</code> computed from real milestone data) answers the brief's "alerting timeliness" metric.</li>
+      <li>A DRUPS shipment flagged at-risk, root cause traced to a <em>tier-2</em> battery-cell customs delay in Shanghai — not just "vendor is late," but why, three tiers deep.</li>
+      <li>The computed alternative: a viable bridge-rental supplier, real lead time, real cost premium.</li>
+      <li>Point at the clickable evidence chip on SHP-002 linking straight to RFI-EL-112 and its schedule activity — computed live from a real shared key, not typed into a slide.</li>
+      <li>Also show the equipment-spec compliance chip (IS 8623-1:1993 MATCH), and the page's own as-of-day disclosure banner — say plainly this is a computed snapshot, not a live carrier feed.</li>
+      <li>The same SHP-002↔RFI-EL-112 link is also drawn as a literal connector line on the Timeline page (groundbreaking → handover, now-line at the current simulated day) — a 5-second cutaway if time allows.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>8 · Live demo — Commissioning QA</strong> · 3:50–4:25 · <span class="stamp neutral">Innovation + Tech</span></p>
+    <ul class="fact tight">
+      <li>Upload the sample cooling test-log CSV live → deterministic PASS / within-allowable / FAIL against the ASHRAE TC9.9 thermal envelope.</li>
+      <li>A real NCR for the Zone C failure → an exportable as-commissioned quality package.</li>
+      <li>State the corpus-limitation banner out loud: cross-source compiled (ASHRAE's book is paywalled), disclosed on every finding, never presented as manak/codebook-grade.</li>
+      <li>Say plainly this is the cooling slice only — electrical/fire commissioning is a disclosed, deliberate gap (see slide 16).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>9 · Live demo — Copilot with hybrid retrieval</strong> · 4:25–4:45 · <span class="stamp neutral">Tech Excellence + UX</span></p>
+    <ul class="fact tight">
+      <li>Cross-document Q&amp;A, cited answers, "this RFI was resolved before."</li>
+      <li>Retrieval now fuses BM25 keyword search with dense embeddings via Reciprocal Rank Fusion — better recall on exact-ID queries ("RFI-EL-112") without touching the eval-calibrated abstention floor.</li>
+      <li>Show it correctly abstaining on an off-topic question, not guessing — that floor is byte-identical before and after hybrid retrieval was added.</li>
+      <li>The page opens with a pre-rendered exemplar — a real <code>askCopilot()</code> call fired on page load, same API path and citation pipeline as a typed question — plus "Try also" chips and a one-line abstention disclosure.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>10 · Live demo — the simulated clock</strong> · 4:45–5:05 · <span class="stamp neutral">Tech Excellence + UX</span></p>
+    <ul class="fact tight">
+      <li>Click the Day N control, advance +14 or +20 days.</li>
+      <li>Real numbers change live: schedule at-risk count grows, an alert's <code>advance_warning_days</code> grows by exactly the days advanced, an alternative supplier that was viable can stop being viable.</li>
+      <li>Reset restores the exact baseline.</li>
+      <li>The single best "prove it, don't just assert it" beat in the whole demo — nothing in the underlying data changes, only time passing does, and the system reacts correctly.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>11 · ROI + Cost-at-Risk</strong> · 5:05–5:35 · <span class="stamp neutral">Business Impact</span></p>
+    <ul class="fact tight">
+      <li>The Overview hero leads with a machine-scale strip (documents read / clauses checked / cross-references found / conflicts surfaced — each verified equal to API ground truth, not typed) and a Next-decisions queue deep-linking to the pillar pages.</li>
+      <li>ROI story: a platform-wide hours/₹-saved total with a per-pillar breakdown (Compliance NCRs, Schedule flags + CPM impact, Supply-Chain at-risk days, Commissioning FAILs) — each traceable to a documented, conservative assumption.</li>
+      <li>Directly answers the brief's "reduction in manual coordination effort measured in hours."</li>
+      <li>Next to it, a Cost-at-Risk panel: deterministic <code>schedule_delay_cost + expedite_premium_cost + rework_exposure</code>, every term's formula and real inputs shown — answers the brief's other explicit ask, "schedule AND cost risk modelling."</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>12 · Proof — 21 separate evals, never blended</strong> · 5:35–6:00 · <span class="stamp neutral">Technical Excellence</span></p>
+    <ul class="fact tight">
+      <li>Rule-decision, extraction, electrical, equipment-spec, supply-chain, schedule, copilot, commissioning, impact-model, cost-risk, mitigation, alerting, hybrid-retrieval-fusion, weather, workforce, timeline-consistency, plus two retrieval/corpus-integrity checks — EIGHTEEN metrics in <code>backend/eval/</code>.</li>
+      <li>Plus THREE more in the standalone Codebook service's own <code>eval/</code> (protocol-level MCP tests, real-corpus integrity) — twenty-one total.</li>
+      <li>Reported separately on purpose — blending them into one number was an earlier mistake this project caught and corrected, and stayed corrected as the pillar count grew from 3 to 5.</li>
+      <li>Show the real numbers from the latest run, live.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>13 · Architecture + where we are (and aren't) agentic</strong> · 6:00–6:20 · <span class="stamp neutral">Tech + Scalability</span></p>
+    <ul class="fact tight">
+      <li><code>docs/ARCHITECTURE.md</code> diagram — every arrow into the LLM labeled "prose only"; Codebook is a build-time dependency, not a live one for the clause text itself.</li>
+      <li>State the agentic position explicitly: agentic where a task is naturally multi-option and every option is a grounded computation (schedule mitigation) — never agentic where a task is a single verifiable yes/no against a cited standard (compliance, commissioning, cost-risk).</li>
+      <li>That line is the honest answer to "why not a fully agentic platform," not a dodge.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>14 · Scalability story — from prototype to product</strong> · 6:20–6:35 · <span class="stamp neutral">Scalability</span></p>
+    <ul class="fact tight">
+      <li>"Breadth scales by adding clauses, not by retraining anything — zero ML training anywhere in this system."</li>
+      <li>Roadmap, said not oversold as built: IS 875 all parts, IS 13920, IS 800, IS 1893 Pt4, NBC 2016.</li>
+      <li>The bigger framing, once, plainly: <strong>"SiteMind is the real product's kernel with the enterprise shell deliberately absent."</strong> The shell (P6/Aconex/SAP connectors, NCR workflow states, role-based push delivery) is commodity engineering that can be hired; the kernel (grounded, deterministic, citable verification, 5 pillars, 21 eval scripts) is the part that can't be bought.</li>
+      <li>Six-stage roadmap: trust kernel (built) → overlay systems of record, don't replace them → equipment-tag ontology as the join key for the brief's 15,000–40,000-line-item scale (today's SHP-002↔RFI-EL-112 evidence link, now on the Timeline, is a working miniature) → findings become workflows → commissioning at real L1–L5 scale → cross-project memory as the compounding moat.</li>
+      <li>Say the honest limit too: no live deploy in this delivery (video + repo, by choice not by gap), single project instance, no second-project proof yet.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>15 · Business impact — mapped to the brief's own diagnosis</strong> · 6:35–6:55 · <span class="stamp neutral">Business Impact</span></p>
+    <ul class="fact tight">
+      <li><code>docs/BUSINESS_IMPACT.md</code>: the pillar-to-root-cause table, then real computed per-issue/per-shipment unit economics.</li>
+      <li>Explicitly NOT a project-level $ projection, since SiteMind has no real project to base one on.</li>
+      <li>This restraint is itself a credibility signal worth saying out loud.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <p class="lede"><strong>16 · Honest close</strong> · 6:55–7:15 · <span class="stamp neutral">All criteria</span></p>
+    <ul class="fact tight">
+      <li>What's real vs. representative (README's framing).</li>
+      <li>What's still deliberately out: Commissioning QA's electrical/fire slice (will be grounded in real Indian codes when built, not the paywalled TIA-942/BICSI/Uptime standards the brief names — explain why that's the more defensible choice), live deployment, a second tenant project.</li>
+      <li>One sentence on what's next.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <span class="lbl">Slides deliberately NOT included</span>
+    <ul class="fact tight" style="margin-top:6px">
+      <li>Any slide asserting a project-level dollar figure derived from the brief's $15B market number — nothing in the codebase supports that multiplication.</li>
+      <li>A slide claiming full autonomous multi-agent orchestration across the whole platform — the schedule mitigation engine specifically is genuinely multi-agent (three specialists + a coordinator, real code, eval-backed) and is claimed plainly on slide 6; Compliance/Commissioning/Cost-Risk stay deterministic Python by design.</li>
+      <li>Any claim of commissioning coverage beyond cooling — the electrical/fire slice is not built.</li>
+      <li>Presenting the live-upload demo (slide 5) as if it were the pre-loaded fixture, or vice versa — the distinction is the entire point of the beat.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SM-12 -->
+<section class="sheet" data-code="SM-12" data-title="Pitch readiness" id="s-pitch">
+  <p class="eyebrow">Sheet 12 — Pitch readiness</p>
+  <h2 class="title">What's ready, what's still open</h2>
+
+  <h3>Who's actually using each pillar</h3>
+  <ul class="fact tight">
+    <li><strong>QA/design-review engineer</strong> — Compliance: catches a bad shop drawing before the RFI takes six days to surface.</li>
+    <li><strong>Site engineer / document controller</strong> — Copilot: stops re-answering the same RFI question from memory.</li>
+    <li><strong>Planning engineer</strong> — Schedule: gets mitigation options, not just a red flag.</li>
+    <li><strong>Procurement lead</strong> — Supply Chain: sees the real root cause, three tiers deep.</li>
+    <li><strong>Commissioning engineer</strong> — Commissioning QA: auto-generates the NCR and quality package.</li>
+  </ul>
+
+  <h3>Q&amp;A ammunition — the headlines</h3>
+  <ul class="fact tight">
+    <li><strong>Where's the AI?</strong> Retrieval finds it, Python decides, LLM narrates only — a measurable hallucination rate.</li>
+    <li><strong>Where are the agents?</strong> One place: 3 specialists + a coordinator in schedule mitigation, honestly scoped.</li>
+    <li><strong>Can it read a drawing?</strong> Not yet — parses docx/PDF prose; the check engine is format-agnostic.</li>
+    <li><strong>Accuracy on real data?</strong> None exists yet; 21 evals + a stated 90-day pilot protocol close the gap.</li>
+    <li><strong>Vs. Procore/Aconex/etc.?</strong> None of them decide against cited standards with a measured hallucination rate.</li>
+    <li><strong>What breaks at 40k line items?</strong> Checks are embarrassingly parallel; retrieval needs a persistent vector store (pgvector/Qdrant planned).</li>
+    <li><strong>Who pays?</strong> Per-project SaaS to the EPC contractor or owner's-engineer.</li>
+    <li><strong>Is IS 456 right for a DC?</strong> Yes, for structural works in India; the corpus mechanism is standard-agnostic.</li>
+    <li><strong>Where's TIA-942/BICSI/Uptime?</strong> Paywalled — paraphrasing would reopen the fabrication risk; grounded in real Indian codes instead.</li>
+    <li><strong>Why trust 0% hallucination?</strong> <code>GET /api/eval/report</code> re-checks every citation live — show the JSON.</li>
+  </ul>
+
+  <h3>Before presenting</h3>
+  <ul class="fact tight">
+    <li>Pre-warm Codebook 15+ minutes ahead — its corpus rebuild takes ~7 minutes.</li>
+    <li>Never restart Codebook once warm, not even between rehearsal and the real run.</li>
+    <li>Watch the on-screen <span class="mono">● live</span> / <span class="mono">● simulated</span> badge — never narrate over a simulated stream as if it's live.</li>
+  </ul>
+
+  <h3>Readiness checklist</h3>
+  <p><span class="stamp verify">Done</span> 5-min cut · honesty statement · Q&amp;A appendix · innovation thesis · business case band · competitive doc · personas · runbook · all citations reachable</p>
+  <p><span class="stamp open">Still open</span> independent/blind-authored eval set (~2h, highest-leverage remaining item) · confirm a pre-recorded demo video exists</p>
+  <p><span class="stamp neutral">Deferred by choice</span> TIA-942/BICSI/Uptime Tier-topology check (paywalled) · live deployment (video + repo only)</p>
+
+  <div class="callout">
+    <span class="lbl">Where the real pitch documents live</span>
+    <code>DEMO_STORY.md</code>, <code>docs/DECK_OUTLINE.md</code>, <code>docs/TELEPROMPTER.md</code>,
+    <code>docs/BUSINESS_IMPACT.md</code> — excluded from git history on purpose (internal build docs),
+    but they're the source of truth on disk, not this page.
+  </div>
+</section>
+
+<!-- SM-13 -->
+<section class="sheet" data-code="SM-13" data-title="File map" id="s-map">
+  <p class="eyebrow">Sheet 13 — Codebase</p>
+  <h2 class="title">Where things actually live</h2>
+  <div class="card filetree">
+<span class="dir">sitemind/</span><br/>
+&nbsp;&nbsp;<span class="dir">backend/</span> <span class="comment"># FastAPI, deterministic layer</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">app/agents/</span> <span class="comment"># compliance.py, checks.py, mitigation.py</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;schedule.py, supply_chain.py, commissioning.py<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;llm.py <span class="comment"># prose only</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">data/standards/</span>clauses.json <span class="comment"># 24 real cited clauses</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">eval/</span> <span class="comment"># 18 backend eval scripts</span><br/>
+&nbsp;&nbsp;<span class="dir">frontend/</span> <span class="comment"># Next.js Command Center</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">app/</span> <span class="comment"># one folder per pillar page</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;lib/api.ts <span class="comment"># every backend call lives here</span><br/>
+&nbsp;&nbsp;<span class="dir">standards-service/</span> <span class="comment"># Codebook, port 8010</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">data/structural_corpus/</span> <span class="comment"># 17 real digitised docs</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">eval/</span> <span class="comment"># 3 Codebook eval scripts</span><br/>
+&nbsp;&nbsp;<span class="dir">docs/</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;ARCHITECTURE.md, features.md, BUSINESS_IMPACT.md<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;COMPETITIVE.md, PERSONAS.md, DEMO_RUNBOOK.md, JUDGE_ONE_PAGER.md<br/>
+&nbsp;&nbsp;README.md <span class="comment"># quick start + REAL vs REPRESENTATIVE</span><br/>
+&nbsp;&nbsp;DEMO_STORY.md <span class="comment"># live-demo narration + Q&amp;A appendix</span>
+  </div>
+</section>
+
+<!-- SM-14 -->
+<section class="sheet" data-code="SM-14" data-title="Reading list" id="s-more">
+  <p class="eyebrow">Sheet 14 — Go deeper</p>
+  <h2 class="title">Where to read more</h2>
+  <ul class="readlist">
+    <li><span class="q">What's built, page by page?</span><code>docs/features.md</code></li>
+    <li><span class="q">How does it all wire together?</span><code>docs/ARCHITECTURE.md</code></li>
+    <li><span class="q">How do I run it?</span><code>README.md</code></li>
+    <li><span class="q">The live-demo script?</span><code>DEMO_STORY.md</code></li>
+    <li><span class="q">The business case?</span><code>docs/BUSINESS_IMPACT.md</code></li>
+    <li><span class="q">Vs. Procore/Aconex/etc.?</span><code>docs/COMPETITIVE.md</code></li>
+    <li><span class="q">Who uses each pillar?</span><code>docs/PERSONAS.md</code></li>
+    <li><span class="q">Pre-demo checklist?</span><code>docs/DEMO_RUNBOOK.md</code></li>
+    <li><span class="q">90-second judge read?</span><code>docs/JUDGE_ONE_PAGER.md</code></li>
+    <li><span class="q">Gaps vs. the brief?</span><code>docs/PS_optimize.md</code></li>
+  </ul>
+</section>
+
+</div>
+
+<div class="stepper">
+  <button id="prevBtn" class="mono">◂ Prev</button>
+  <button id="nextBtn" class="primary mono">Next ▸</button>
+</div>
+
+<script>
+  const sheets = Array.from(document.querySelectorAll('.sheet'));
+  const ruler = document.getElementById('ruler');
+  const picker = document.getElementById('picker');
+  const pickerBackdrop = document.getElementById('pickerBackdrop');
+  const sheetPickerBtn = document.getElementById('sheetPickerBtn');
+  const sheetCodeLabel = document.getElementById('sheetCodeLabel');
+  const sheetTitleLabel = document.getElementById('sheetTitleLabel');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const visited = new Set([0]);
+  let current = 0;
+
+  sheets.forEach((s, i) => {
+    const t = document.createElement('button');
+    t.textContent = String(i).padStart(2, '0');
+    t.title = s.dataset.title;
+    t.addEventListener('click', () => go(i));
+    ruler.appendChild(t);
+
+    const p = document.createElement('button');
+    p.setAttribute('role', 'menuitem');
+    p.innerHTML = '<span class="code mono">' + s.dataset.code + '</span><span>' + s.dataset.title + '</span>';
+    p.addEventListener('click', () => { go(i); closePicker(); });
+    picker.appendChild(p);
+  });
+
+  function render() {
+    sheets.forEach((s, i) => s.classList.toggle('active', i === current));
+    Array.from(ruler.children).forEach((b, i) => {
+      b.classList.toggle('active', i === current);
+      b.classList.toggle('visited', visited.has(i));
+    });
+    Array.from(picker.children).forEach((b, i) => b.classList.toggle('active', i === current));
+    sheetCodeLabel.textContent = sheets[current].dataset.code;
+    sheetTitleLabel.innerHTML = sheets[current].dataset.title;
+    prevBtn.disabled = current === 0;
+    nextBtn.textContent = current === sheets.length - 1 ? 'Done ✓' : '';
+    if (current === sheets.length - 1) { nextBtn.innerHTML = 'Restart ↺'; } else { nextBtn.innerHTML = 'Next ▸'; }
+    history.replaceState(null, '', '#' + sheets[current].id);
+    document.getElementById('stage').scrollIntoView({ block: 'start', behavior: 'instant' in window ? 'instant' : 'auto' });
+  }
+
+  function go(i) {
+    current = Math.max(0, Math.min(sheets.length - 1, i));
+    visited.add(current);
+    render();
+  }
+
+  prevBtn.addEventListener('click', () => go(current - 1));
+  nextBtn.addEventListener('click', () => go(current === sheets.length - 1 ? 0 : current + 1));
+
+  function openPicker() {
+    picker.style.display = 'block'; pickerBackdrop.classList.add('open');
+    sheetPickerBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closePicker() {
+    picker.style.display = 'none'; pickerBackdrop.classList.remove('open');
+    sheetPickerBtn.setAttribute('aria-expanded', 'false');
+  }
+  picker.style.display = 'none';
+  sheetPickerBtn.addEventListener('click', () => picker.style.display === 'none' ? openPicker() : closePicker());
+  pickerBackdrop.addEventListener('click', closePicker);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') go(current + 1);
+    if (e.key === 'ArrowLeft') go(current - 1);
+    if (e.key === 'Escape') closePicker();
+  });
+
+  // Deep-link support: open on the sheet matching location.hash, if any.
+  const initial = sheets.findIndex(s => '#' + s.id === location.hash);
+  current = initial >= 0 ? initial : 0;
+  visited.add(current);
+  render();
+</script>
+
+</body>
+</html>

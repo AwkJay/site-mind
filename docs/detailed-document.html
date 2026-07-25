@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiteMind — The Whole Project, Explained Simply</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0f14; --bg2: #121821; --card: #161d28; --line: #263042;
+    --text: #e7edf5; --text-mid: #a9b6c8; --text-lo: #6d7d92;
+    --accent: #bef264; --data: #38bdf8; --amber: #fbbf24; --red: #f87171; --purple: #b1b9f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 40px 24px 120px;
+  }
+  h1 { font-size: 2.1rem; margin-bottom: 4px; }
+  h2 {
+    font-size: 1.5rem; margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
+    color: var(--accent);
+  }
+  h3 { font-size: 1.15rem; margin-top: 28px; color: var(--data); }
+  h4 { font-size: 1rem; margin-top: 20px; color: var(--text); }
+  p, li { color: var(--text-mid); }
+  strong { color: var(--text); }
+  .eyebrow { color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
+  .subtitle { color: var(--text-mid); font-size: 1.05rem; margin-top: 8px; }
+  .toc { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; margin: 32px 0; }
+  .toc a { color: var(--data); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+  .pillar-card { border-left: 3px solid var(--accent); }
+  .hexa-card { border-left: 3px solid var(--purple); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--text-lo); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; }
+  code { background: rgba(190,242,100,0.1); color: var(--accent); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+  .badge-real { background: rgba(190,242,100,0.15); color: var(--accent); }
+  .badge-rep { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .badge-new { background: rgba(177,185,249,0.15); color: var(--purple); }
+  .mermaid { background: var(--bg2); border-radius: 10px; padding: 16px; margin: 20px 0; }
+  .callout { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25); border-radius: 8px; padding: 14px 18px; margin: 16px 0; }
+  .callout-warn { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); }
+  .tree { background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; white-space: pre; overflow-x: auto; color: var(--text-mid); }
+  .tree b { color: var(--accent); }
+  .glossary dt { color: var(--text); font-weight: 600; margin-top: 12px; }
+  .glossary dd { color: var(--text-mid); margin-left: 0; margin-bottom: 8px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+  footer { color: var(--text-lo); font-size: 0.85rem; margin-top: 60px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Personal reference · not for judges · no code, plain explanations</div>
+<h1>SiteMind, explained from scratch</h1>
+<p class="subtitle">
+  Everything this project is, why it exists, what each piece does, and how it all fits together —
+  written so you can explain any part of it to a judge without needing to look at code.
+</p>
+
+<div class="toc">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#context">Where this came from</a></li>
+  <li><a href="#idea">The one idea that makes this different</a></li>
+  <li><a href="#pillars">The five original pillars</a></li>
+  <li><a href="#tiers">How a verdict actually gets decided (tiered verdicts)</a></li>
+  <li><a href="#hexafalls">The HexaFalls additions (sponsor tech)</a></li>
+  <li><a href="#architecture">Architecture — how the pieces connect</a></li>
+  <li><a href="#folders">Folder and file structure</a></li>
+  <li><a href="#day">A day in the life — who uses this, and how</a></li>
+  <li><a href="#running">How to actually run it</a></li>
+  <li><a href="#honesty">What's real vs. representative</a></li>
+  <li><a href="#glossary">Glossary — every term you'll need</a></li>
+  <li><a href="#gaps">Known gaps (short version — full list in gaps.md)</a></li>
+</ol>
+</div>
+
+<h2 id="context">1 · Where this came from</h2>
+
+<ul>
+  <li><strong>Original build:</strong> ET AI Hackathon 2026, Problem #4 — "AI Intelligence Platform
+    for Data-Centre EPC Project Delivery." EPC = Engineering, Procurement, Construction — the
+    industry term for how a big facility (a data centre, in this case) actually gets built by a
+    web of contractors, submittals, inspections, and sign-offs.</li>
+  <li><strong>That hackathon ended.</strong> The project then moved to <strong>HexaFalls</strong>,
+    an open-innovation hackathon with sponsor prize tracks and no fixed problem statement.</li>
+  <li><strong>What changed:</strong> the positioning broadened from "just data centres" to
+    <em>any hyperscale or public-infrastructure megaproject</em> — semiconductor fabs, highways,
+    metro rail, government buildings — anywhere a lot of money moves through a paper trail that's
+    hard for any one person to audit.</li>
+  <li><strong>What did NOT change:</strong> the core credibility idea (next section). Every
+    HexaFalls addition sits <em>around</em> that core — none of it replaces or weakens it.</li>
+</ul>
+
+<h2 id="idea">2 · The one idea that makes this different</h2>
+
+<p><strong>The problem with most "AI compliance" tools:</strong> they either (a) let the AI just
+say "this passes" or "this fails" with no way to check its work, or (b) they cite a rule but you
+have no way to know if the rule is real or made up.</p>
+
+<div class="callout">
+<strong>SiteMind's answer: the LLM never computes a verdict.</strong><br>
+The AI's job is only to <em>read</em> and <em>explain</em>. Every pass/fail decision is made by
+plain, ordinary computer code — the kind you could open and read line by line — checking a number
+against a real, citable rule from an actual government/industry standard.
+</div>
+
+<div class="mermaid">
+flowchart LR
+    A["1 · Perceive<br/>AI reads the document,<br/>pulls out a value<br/>+ exactly which sentence<br/>it came from"] --> B["2 · Decide<br/>Plain Python code checks<br/>that value against a<br/>real, cited rule —<br/>the AI never touches this step"]
+    B --> C["3 · Explain<br/>AI writes up the finding<br/>in plain English for a<br/>site engineer to read"]
+</div>
+
+<ul>
+  <li><strong>Why this matters:</strong> if a verdict is ever wrong, you can point at the exact
+    line of code that produced it and the exact clause it checked against — nothing is hidden
+    inside a black-box model's "trust me."</li>
+  <li><strong>Every citation is real</strong> — pulled from real, digitised Indian building-code
+    documents (IS 456, IS 1893, IS 875, CEA regulations, etc.), never invented from the AI's
+    training memory.</li>
+  <li><strong>Every number this project claims is backed by a real, re-runnable test</strong>
+    (an "eval" — see the Glossary) — nothing is just asserted in a slide.</li>
+</ul>
+
+<h2 id="pillars">3 · The five original pillars</h2>
+
+<p>Think of these as five separate mini-products bundled into one app, all reading from the same
+project's documents.</p>
+
+<div class="card pillar-card">
+<h3>① Compliance Agent — the flagship</h3>
+<ul>
+  <li><strong>What it does:</strong> you upload a design document (a "Design Basis Report" or a
+    contractor submittal). It reads out every checkable engineering value (concrete grade, rebar
+    cover, seismic factor, etc.) along with the <em>exact sentence</em> it came from, then checks
+    each one against the real building code clause that governs it.</li>
+  <li><strong>Output:</strong> a list of "NCRs" (Non-Conformance Reports) — plain-English findings,
+    each with severity, the exact clause cited, and a recommended fix.</li>
+  <li><strong>Who uses it:</strong> a QA/QC manager or design reviewer on a construction project,
+    who today does this checking by hand against a stack of paper codes.</li>
+  <li><strong>Real-world scenario:</strong> a structural engineer submits a foundation drawing
+    specifying 30mm of concrete cover. SiteMind reads that value, finds the sentence it came from,
+    checks it against IS 456's real minimum-cover table for that exposure condition, and — in this
+    project's demo dataset — correctly flags it as short of the 50mm required, citing the exact
+    clause number.</li>
+</ul>
+</div>
+
+<div class="card pillar-card">
+<h3>② Project / RFI Copilot</h3>
+<ul>
+  <li><strong>What it does:</strong> a search-and-answer box for the whole project — ask a question
+    in plain English, get an answer with citations, not a guess.</li>
+  <li><strong>The safety mechanism:</strong> if the system isn't confident enough in what it found,
+    it says so honestly ("no confident answer") instead of inventing something plausible-sounding.</li>
+  <li><strong>Bonus:</strong> it can also recognize when a question is basically a duplicate of an
+    already-answered RFI (Request for Information) — even if worded completely differently.</li>
+  <li><strong>Who uses it:</strong> anyone on the project team who'd otherwise have to dig through
+    hundreds of pages of specs to answer "what's the required clearance for X?"</li>
+</ul>
+</div>
+
+<div class="card pillar-card">
+<h3>③ Schedule Risk</h3>
+<ul>
+  <li><strong>What it does:</strong> looks at the project's construction schedule (a network of
+    hundreds of dependent tasks) using a real scheduling technique called CPM (Critical Path
+    Method — basically: which tasks, if delayed, delay the WHOLE project), combined with
+    leading-indicator rules (a late procurement order, a stretch of bad weather, a workforce
+    shortage) to predict which activities are at risk of slipping.</li>
+  <li><strong>Output:</strong> a risk list with WHY each activity is at risk, how many days it
+    might slip, and — critically — how that slip would ripple through the rest of the schedule,
+    plus AI-generated mitigation suggestions from three different "angles" (procurement,
+    scheduling float, and resourcing).</li>
+  <li><strong>Who uses it:</strong> a project scheduler/PM who currently finds out about a slip
+    only after it's already happened.</li>
+</ul>
+</div>
+
+<div class="card pillar-card">
+<h3>④ Supply Chain Visibility &amp; Risk</h3>
+<ul>
+  <li><strong>What it does:</strong> tracks equipment shipments (transformers, generators, chillers
+    — the big long-lead-time items) across multiple tiers of suppliers, flags ones at risk of
+    arriving late, figures out the root cause, and even checks whether the equipment's spec sheet
+    itself meets the governing standard (e.g. IS 8623-1 for switchgear).</li>
+  <li><strong>Output:</strong> severity-tiered alerts with the evidence behind each one, linkable
+    straight to the shipment/document that triggered it.</li>
+  <li><strong>Who uses it:</strong> a procurement/logistics manager juggling dozens of shipments
+    from multiple countries.</li>
+</ul>
+</div>
+
+<div class="card pillar-card">
+<h3>⑤ Commissioning QA</h3>
+<ul>
+  <li><strong>What it does:</strong> ingests real equipment test-log data (currently: cooling-system
+    logs) and checks every reading against an engineering "envelope" (allowable operating range) —
+    pass, fail, or "allowable but flagged" — producing NCRs and a full as-commissioned quality
+    package, the same kind of document normally assembled by hand at project handover.</li>
+  <li><strong>Scope right now:</strong> the cooling/HVAC slice is fully built; electrical and fire
+    commissioning are noted as a future extension (there just wasn't good enough real test-log data
+    available to build them credibly yet).</li>
+  <li><strong>Who uses it:</strong> a commissioning engineer, at the point where a system is being
+    signed off as ready for operation.</li>
+</ul>
+</div>
+
+<h2 id="tiers">4 · How a verdict actually gets decided (tiered verdicts)</h2>
+
+<p>This is the newest and most important upgrade to the core idea (built during the HexaFalls
+phase). Originally, every single check needed someone to hand-write the rule in code ahead of time.
+That doesn't scale to the thousands of clauses across dozens of Indian standards. So there are now
+<strong>two tiers</strong>:</p>
+
+<table>
+<tr><th>Tier</th><th>When it applies</th><th>Who decides the verdict</th><th>How it's shown</th></tr>
+<tr>
+  <td><strong>Certified</strong></td>
+  <td>A parameter that someone has already hand-written a rule for</td>
+  <td>Hand-vetted Python code (unchanged from day one)</td>
+  <td>Green badge: "Certified · pre-vetted"</td>
+</tr>
+<tr>
+  <td><strong>Computed-draft</strong></td>
+  <td>No hand-written rule exists for this parameter yet</td>
+  <td>The AI <em>reads</em> the real clause and writes down what the rule IS (as structured data,
+      not a verdict) — then a small, separate, sandboxed piece of code computes the actual
+      pass/fail from that</td>
+  <td>Amber badge: "DRAFT · confirm reading" — an engineer must sign off</td>
+</tr>
+<tr>
+  <td><strong>Unresolved</strong></td>
+  <td>Nothing confident enough was found, or the AI's reading failed a safety check</td>
+  <td>Nobody — it's honestly flagged as unresolved rather than guessed at</td>
+  <td>Slate badge: "No governing clause found"</td>
+</tr>
+</table>
+
+<div class="callout">
+<strong>The key safety detail:</strong> in the computed-draft tier, the AI is only ever allowed to
+fill in a structured template (like: "this value must be ≥ this number, from this exact clause
+text"). It NEVER writes or runs its own math. A tiny, deliberately limited calculator (it can only
+do addition/subtraction/multiplication/division/min/max on known numbers — nothing else, no
+arbitrary code execution) does the actual computing. And before any of this is trusted, the system
+double-checks that the specific phrase the AI says it read really does appear, word-for-word, in
+the real clause text — if that check fails, the result is thrown out as "unresolved," not silently
+used anyway.
+</div>
+
+<h2 id="hexafalls">5 · The HexaFalls additions (sponsor tech)</h2>
+
+<p>These are new capabilities layered on top of the untouched core above. Every one of them is
+<strong>optional and off by default</strong> — the app works completely fine without any of them,
+which matters because it means a judge can run this with zero setup and still see the real thing.</p>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">Gemini</span> — the AI's new default "brain" for reading/writing</h3>
+<ul>
+  <li>Replaced Anthropic Claude as the default model that reads documents and writes the
+    plain-English findings (Anthropic and a couple of others are still supported as alternatives).</li>
+  <li>Purely a "perceive and explain" role — see the core idea above. Swapping the model here
+    changes nothing about how a verdict is decided.</li>
+</ul>
+</div>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">Actian VectorAI DB</span> — offline semantic search</h3>
+<ul>
+  <li>The Copilot/Knowledge Base features need to search thousands of code-clause chunks by
+    <em>meaning</em>, not just keyword — that's done with "embeddings" (turning text into a list
+    of numbers that capture its meaning) and a "vector database" to search them fast.</li>
+  <li>The default engine for this keeps everything in the app's own memory (called "numpy" here).
+    Actian is a real, separate, offline database that can do the same job — useful for a site that
+    can't send its data over the internet at all (a genuinely realistic requirement for sensitive
+    infrastructure projects).</li>
+  <li>Swapping to Actian changes nothing about what answers look like — same search, different
+    engine underneath, which is exactly the point (it's a drop-in replacement).</li>
+</ul>
+</div>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">MongoDB Atlas</span> — the audit ledger</h3>
+<ul>
+  <li>Every time the system finalizes a compliance decision, it's now recorded once, permanently,
+    in a running log — an "audit ledger." Records are never edited or deleted, only added.</li>
+  <li>Each record carries a "content hash" — a unique fingerprint computed from its important
+    fields (severity, citation, values — NOT the AI-written prose, which can legitimately reword
+    itself between runs). If the underlying decision data changes later, the fingerprint no longer
+    matches, and that mismatch is detectable.</li>
+  <li>If no MongoDB is configured, it quietly falls back to a plain local file doing the exact same
+    job — the ledger always works, one way or the other.</li>
+</ul>
+</div>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">Solana (blockchain)</span> — the anti-corruption proof</h3>
+<ul>
+  <li>This is the single most concrete "we can prove nobody quietly changed a record" feature in
+    the whole project.</li>
+  <li>Take a ledger record's fingerprint (from above) and write it into a tiny, real transaction on
+    the Solana blockchain (a test network called "devnet" — no real money involved). Blockchains are
+    designed so that once something is written, it can't be secretly edited or erased by anyone,
+    including SiteMind itself.</li>
+  <li><strong>The demo that makes this land:</strong> anchor a record's fingerprint on-chain, prove
+    it with a public link anyone can check → then someone edits that record's data directly in the
+    database, simulating tampering → the system re-checks and shows the LOCAL record no longer
+    matches its own fingerprint, WHILE the blockchain independently confirms what the original,
+    real fingerprint was. You don't have to trust SiteMind's own database to catch the tampering.</li>
+  <li>Careful phrasing matters here: this is <strong>tamper-evident</strong> (you can prove
+    something was altered after the fact), not "tamper-proof" in the sense of preventing a person
+    from acting corruptly in the first place, or from simply choosing not to anchor a record at all.</li>
+</ul>
+</div>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">Telegram + ElevenLabs</span> — the field bot</h3>
+<ul>
+  <li>A site engineer standing at a transformer yard, phone in hand, isn't going to open a laptop
+    and type a question. This is a Telegram chat bot they can talk to instead — by text OR by
+    sending a voice note, in Hindi, English, or another regional language.</li>
+  <li><strong>The pipeline:</strong> voice note → ElevenLabs turns speech into text → if needed, the
+    AI translates it to English → the same Copilot from Pillar ② answers it, with the same
+    "abstain if not confident" honesty → the answer gets translated back → ElevenLabs turns THAT
+    into a spoken voice clip → the engineer gets a voice reply plus the text plus a link to the
+    real citation.</li>
+  <li>Out-of-scope questions still get an honest "I don't have a confident answer for that" instead
+    of a made-up one — same discipline as the desktop Copilot, just reachable from a phone in the field.</li>
+</ul>
+</div>
+
+<div class="card hexa-card">
+<h3><span class="badge badge-new">LangGraph</span> — the Copilot's conversational upgrade</h3>
+<ul>
+  <li>The original Copilot answers ONE question at a time with no memory of what you asked before.
+    This upgrade turns it into a real back-and-forth conversation that remembers context (so "what
+    about the transformer?" as a follow-up actually makes sense) and can pull information from
+    multiple pillars in one answer (e.g. "any open issues on this submittal, AND is the cooling
+    equipment shipment delayed?" in a single question).</li>
+  <li><strong>Important boundary:</strong> this is the ONLY place in the whole codebase where a
+    general-purpose "AI agent framework" is allowed to run at all. Everywhere else in this project
+    deliberately avoids that kind of framework, on purpose, because the verdict-deciding core needs
+    to stay simple enough to audit line-by-line. This agent is only allowed to fetch already-computed,
+    read-only information and phrase a cited answer from it — it is physically incapable of
+    producing a new compliance verdict, because it has no access to that part of the codebase at all.</li>
+</ul>
+</div>
+
+<h2 id="architecture">6 · Architecture — how the pieces connect</h2>
+
+<div class="mermaid">
+flowchart TD
+    subgraph Browser["Your browser"]
+      UI["Command Center UI<br/>(Next.js)"]
+    end
+    subgraph Server["Backend server (FastAPI, Python)"]
+      API["The 5 pillars + Audit Ledger<br/>+ Copilot agent"]
+    end
+    CB["Codebook<br/>(standalone standards service —<br/>6,200+ verified code-clause chunks)"]
+    VDB["Vector search<br/>(in-memory, or Actian —<br/>offline DB)"]
+    MDB["MongoDB Atlas<br/>(audit ledger)<br/>or local file fallback"]
+    SOL["Solana blockchain<br/>(devnet — proof-of-no-tampering)"]
+    TG["Telegram bot<br/>+ ElevenLabs voice"]
+
+    UI -->|talks only to the backend| API
+    API --> CB
+    API --> VDB
+    API --> MDB
+    API --> SOL
+    TG -->|same public Copilot API| API
+</div>
+
+<ul>
+  <li><strong>The browser never talks to anything except the backend</strong> — no direct calls to
+    Gemini, MongoDB, or Solana from the UI. That single choke point is what keeps the whole system
+    auditable and swappable.</li>
+  <li><strong>Codebook</strong> is deliberately its own separate service — it's designed to be
+    reusable by ANY AI agent (not just this app) as a standards lookup tool, using a standard called
+    MCP (Model Context Protocol — a common way for AI tools to expose capabilities to AI agents).</li>
+  <li><strong>Every external integration degrades gracefully.</strong> Unset a key, stop a service,
+    or turn off a flag, and the app doesn't crash — it just falls back to the simplest version of
+    itself (a local file instead of a database, the in-memory search instead of Actian, "disabled"
+    instead of a blockchain anchor). This was a deliberate design rule applied consistently, not an
+    accident.</li>
+</ul>
+
+<h2 id="folders">7 · Folder and file structure</h2>
+
+<div class="tree">sitemind/
+├── <b>backend/</b>              FastAPI server — all 5 pillars + audit ledger + copilot agent
+│   ├── app/
+│   │   ├── agents/          compliance.py, copilot.py, copilot_agent.py, rule_eval.py, mitigation.py...
+│   │   ├── retrieval/       the hybrid search engine + vector store swap (numpy/Actian)
+│   │   ├── config.py        every feature flag and env var lives here
+│   │   ├── audit.py         the Mongo/JSONL audit ledger
+│   │   ├── notary.py        Solana anchoring
+│   │   ├── schedule.py, supply_chain.py, commissioning.py   the other 3 pillars
+│   │   └── main.py           wires every router together
+│   ├── data/                 the demo project's documents, submittals, RFI log, schedule
+│   ├── eval/                  ~20 re-runnable scripts that PROVE every number this project claims
+│   └── tests/                 unit tests
+├── <b>frontend/</b>             Next.js "Command Center" — one page per pillar + audit ledger
+├── <b>standards-service/</b>    Codebook — the standalone, reusable standards lookup service
+├── <b>telegram-bot/</b>         the field bot (plan §F1) — standalone, talks to backend's Copilot API
+├── <b>docs/</b>                 all documentation (this file included) — docs/archive/ is retired history
+├── hexafalls_plan.md         the master build spec for the HexaFalls phase
+├── digitalocean.md            deploy guide (not yet actually deployed)
+├── trail.md                   the append-only autonomous-session activity log
+└── later.md                   things deliberately deferred, with exact resume instructions
+</div>
+
+<h2 id="day">8 · A day in the life — who uses this, and how</h2>
+
+<div class="card">
+<p><strong>Morning:</strong> a structural design reviewer at the EPC contractor uploads the latest
+revision of a foundation shop drawing. SiteMind reads it in seconds, flags that the specified
+concrete cover is short of what IS 456 requires for this exposure condition, cites the exact
+clause, and drafts a Non-Conformance Report. The reviewer confirms it and sends it back to the
+contractor for revision — a check that used to mean manually flipping through a paper code book.</p>
+
+<p><strong>Midday:</strong> a site engineer standing at the transformer yard isn't sure what
+clearance distance is required. Rather than walk back to an office computer, they send a Hindi
+voice note to the project's Telegram bot and get a cited answer back as a spoken clip in seconds.</p>
+
+<p><strong>Afternoon:</strong> the project scheduler checks the Schedule Risk page and sees that a
+critical cabling activity is now flagged at risk because of a linked equipment shipment delay —
+traced back through Supply Chain Visibility to a specific supplier's customs hold. They use the
+suggested mitigation options to decide whether to expedite shipping or reshuffle the schedule.</p>
+
+<p><strong>Anytime, for an owner/auditor:</strong> anyone can open the Audit Ledger, pick any
+finalized decision, and verify — independent of trusting SiteMind's own database — that the record
+hasn't been quietly altered since it was made, by checking its hash against what's permanently
+anchored on a public blockchain.</p>
+</div>
+
+<h2 id="running">9 · How to actually run it</h2>
+
+<ul>
+  <li><strong>Simplest path (no keys needed at all):</strong>
+    <code>cd backend && ./run.sh</code> then <code>cd frontend && npm install && npm run dev</code>
+    — Compliance and Commissioning QA work end-to-end offline, with deterministic templated prose
+    instead of AI-written prose.</li>
+  <li><strong>Full details, every flag, every optional key:</strong> see <code>README.md</code> at
+    the repo root — it's kept accurate and is the single source of truth for exact run commands.</li>
+  <li><strong>The HexaFalls additions</strong> (Actian, Mongo, Solana, the Telegram bot, the
+    LangGraph copilot edge) each need their own env var turned on — none of them are needed to see
+    the core product working.</li>
+</ul>
+
+<h2 id="honesty">10 · What's real vs. representative</h2>
+
+<table>
+<tr><th>Category</th><th>Status</th><th>Detail</th></tr>
+<tr><td>The building-code clauses &amp; their text</td><td><span class="badge badge-real">Real</span></td>
+  <td>Digitised from actual Indian Standards / CEA documents, never paraphrased from AI memory</td></tr>
+<tr><td>The checking logic (both tiers)</td><td><span class="badge badge-real">Real</span></td>
+  <td>Runs against a real eval suite that proves the numbers claimed</td></tr>
+<tr><td>The crypto/audit mechanisms (Mongo, Solana)</td><td><span class="badge badge-real">Real</span></td>
+  <td>A real database, a real blockchain transaction — not simulated</td></tr>
+<tr><td>The pre-loaded demo project itself</td><td><span class="badge badge-rep">Representative</span></td>
+  <td>A synthetic 48MW Chennai data-centre project, modelled on real public Indian tenders — not a
+      real client's actual project</td></tr>
+<tr><td>ROI figures (engineer-hours/cost saved)</td><td><span class="badge badge-rep">Representative</span></td>
+  <td>Labelled assumptions, not measurements — always disclosed as such</td></tr>
+</table>
+
+<h2 id="glossary">11 · Glossary — every term you'll need</h2>
+
+<dl class="glossary">
+  <dt>NCR (Non-Conformance Report)</dt>
+  <dd>A formal finding that something doesn't meet a required standard — the standard output of
+    the Compliance pillar.</dd>
+  <dt>RFI (Request for Information)</dt>
+  <dd>A formal question one party on a construction project asks another — "does clause X apply
+    here?" — logged and tracked like a ticket.</dd>
+  <dt>Clause</dt>
+  <dd>One specific, numbered rule inside a building code standard (e.g. "IS 456:2000, Clause 26.4.2.2").</dd>
+  <dt>Verdict / verdict tier</dt>
+  <dd>The pass/fail decision on one checked value, and which of the three tiers (certified /
+    computed-draft / unresolved) produced it — see section 4.</dd>
+  <dt>Eval (evaluation script)</dt>
+  <dd>A re-runnable test that checks the system's actual behavior against a known-correct answer
+    set, producing a real accuracy number — the ONLY source this project allows for any claimed
+    metric.</dd>
+  <dt>Embeddings / vector search</dt>
+  <dd>Turning text into a list of numbers that captures its meaning, so a computer can find
+    "similar meaning" text even when the wording is completely different.</dd>
+  <dt>Abstention</dt>
+  <dd>The system's deliberate choice to say "I don't have a confident answer" rather than guess —
+    treated as a correct outcome, not a failure, when the confidence really is too low.</dd>
+  <dt>Content hash</dt>
+  <dd>A unique fingerprint computed from a record's important fields — changes if and only if the
+    underlying data changes.</dd>
+  <dt>Devnet (Solana)</dt>
+  <dd>Solana's free public test network — real blockchain mechanics, zero real-money cost.</dd>
+  <dt>Flag / feature flag</dt>
+  <dd>An on/off switch (an environment variable) that turns an optional capability on — everything
+    in this project defaults to OFF for anything that needs an external key/service.</dd>
+  <dt>MCP (Model Context Protocol)</dt>
+  <dd>A standard way for a piece of software to expose its capabilities so ANY AI agent can call
+    them — what makes Codebook reusable outside this app.</dd>
+</dl>
+
+<h2 id="gaps">12 · Known gaps (short version)</h2>
+
+<p>A full, honest audit of everything imperfect about the current build lives in
+<code>docs/gaps.md</code>. In short: a handful of citation links point at a dev-only host rather
+than a public one (the clause TEXT itself is still fully accurate in-app), some HexaFalls additions
+are built and individually verified but haven't yet had a full live end-to-end run (documented
+precisely in <code>later.md</code>), and the repository currently has zero git commits (an
+intentional fresh-history reset, not yet followed by an actual commit).</p>
+
+<footer>
+  Written for personal understanding, not for judges. Kept in sync with the actual codebase as of
+  this session — cross-check anything load-bearing against the real code before repeating it live.
+</footer>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+</body>
+</html>

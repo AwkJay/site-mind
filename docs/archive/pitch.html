@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteMind: Pitch Deck</title>
+<style>
+  :root {
+    --bg-900: #0b0f14;
+    --bg-800: #11161d;
+    --bg-700: #1a212b;
+    --bg-600: #232c38;
+    --line: #2c3743;
+    --text-hi: #eaf0f6;
+    --text-mid: #9fb0bf;
+    --text-lo: #637382;
+    --accent: #bef264;
+    --accent-glow: rgba(190, 242, 100, 0.28);
+    --pass: #3bd671;
+    --info: #38bdf8;
+    --warning: #ffb020;
+    --critical: #ff5c5c;
+    --pass-bg: rgba(59, 214, 113, 0.12);
+    --info-bg: rgba(56, 189, 248, 0.12);
+    --warning-bg: rgba(255, 176, 32, 0.12);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg-900); color: var(--text-hi);
+    font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-blend-mode: overlay;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background: var(--bg-900); opacity: 0.92; z-index: -1; pointer-events: none;
+  }
+  .deck {
+    height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory;
+    scrollbar-width: thin;
+  }
+  .slide {
+    min-height: 100vh; scroll-snap-align: start;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 5.5vh 7vw 6vh; position: relative; border-bottom: 1px solid var(--line);
+  }
+  .slide-meta {
+    position: absolute; top: 3.2vh; left: 7vw; right: 7vw;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Cascadia Mono", "Consolas", monospace;
+    font-size: 0.72rem; color: var(--text-lo); letter-spacing: 0.04em;
+  }
+  .slide-meta .brand { color: var(--text-mid); font-weight: 600; }
+  .slide-meta .chips { display: flex; gap: 0.4em; }
+  .rubric-chip {
+    display: inline-flex; align-items: center; gap: 0.35em;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.28em 0.85em; font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .rubric-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tag-innovation { color: var(--accent); background: rgba(190,242,100,0.10); }
+  .tag-impact { color: var(--info); background: var(--info-bg); }
+  .tag-tech { color: var(--pass); background: var(--pass-bg); }
+  .tag-scale { color: var(--warning); background: var(--warning-bg); }
+  .tag-ux { color: var(--text-mid); background: var(--bg-700); }
+  .eyebrow {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 0.8em;
+  }
+  h1 {
+    font-family: "Segoe UI Semibold", "Inter", sans-serif;
+    font-size: clamp(1.7rem, 3vw, 2.7rem); line-height: 1.14; margin: 0 0 0.45em;
+    letter-spacing: -0.01em; max-width: 22ch; text-wrap: balance;
+  }
+  .lede {
+    font-size: clamp(0.95rem, 1.3vw, 1.15rem); color: var(--text-mid);
+    max-width: 66ch; line-height: 1.55; margin: 0 0 1.1em;
+  }
+  ul.points { list-style: none; margin: 0; padding: 0; max-width: 68ch; }
+  ul.points li {
+    position: relative; padding: 0.5em 0 0.5em 1.4em; font-size: 0.98rem;
+    line-height: 1.5; color: var(--text-hi); border-top: 1px solid var(--line);
+  }
+  ul.points li:first-child { border-top: none; }
+  ul.points li::before {
+    content: "→"; position: absolute; left: 0; color: var(--accent); font-family: monospace;
+  }
+  .quote {
+    font-size: clamp(1.05rem, 1.7vw, 1.35rem); font-style: normal; line-height: 1.5;
+    max-width: 52ch; color: var(--text-hi); border-left: 3px solid var(--accent);
+    padding-left: 1em; margin: 0.6em 0;
+  }
+  .metric { font-family: "Cascadia Mono", "Consolas", monospace; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .footnote {
+    margin-top: 1.2em; font-size: 0.74rem; color: var(--text-lo); max-width: 66ch; line-height: 1.5;
+  }
+  .hero .eyebrow { font-size: 0.82rem; }
+  .hero h1 { font-size: clamp(2.1rem, 4.6vw, 3.6rem); max-width: 24ch; }
+  .hero .lede { font-size: clamp(1rem, 1.5vw, 1.25rem); max-width: 62ch; }
+  .rail {
+    position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 7px; z-index: 10;
+  }
+  .rail button {
+    width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--line);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .rail button.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent-glow); width: 9px; height: 9px; }
+  .hint {
+    position: fixed; bottom: 16px; left: 7vw; font-size: 0.68rem; color: var(--text-lo);
+    font-family: "Cascadia Mono", "Consolas", monospace; letter-spacing: 0.03em; z-index: 10;
+  }
+
+  /* stat strip */
+  .stat-row { display: flex; gap: 1.4rem; margin: 1.4rem 0 0.8rem; flex-wrap: wrap; }
+  .stat-card {
+    border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.3rem;
+    background: var(--bg-800); min-width: 210px; flex: 1;
+  }
+  .stat-card .num { font-family: "Cascadia Mono", "Consolas", monospace; font-size: 1.9rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-card .lbl { font-size: 0.78rem; color: var(--text-mid); margin-top: 0.5em; line-height: 1.4; }
+
+  /* browser-frame screenshot component */
+  .shot { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg-800);
+          box-shadow: 0 24px 60px -24px rgba(0,0,0,0.65); }
+  .shot .bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: var(--bg-700); border-bottom: 1px solid var(--line); }
+  .shot .bar span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .shot .bar span:nth-child(1) { background: #ff5f57; }
+  .shot .bar span:nth-child(2) { background: #febc2e; }
+  .shot .bar span:nth-child(3) { background: #28c840; }
+  .shot .cap { margin-left: 8px; font-family: "Cascadia Mono", "Consolas", monospace; font-size: 0.66rem; color: var(--text-lo); }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+  /* slide 2 layout */
+  .split { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 2.4rem; align-items: center; max-width: 100%; }
+  @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
+  .split .shot { height: 32vh; }
+
+  /* pipeline diagram (slide 3) */
+  .pipeline { display: flex; align-items: stretch; gap: 0.6rem; max-width: 100%; margin-top: 1.6rem; flex-wrap: nowrap; }
+  .p-step {
+    flex: 1; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-800);
+    padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; min-width: 0;
+  }
+  .p-step .n { font-family: "Cascadia Mono", "Consolas", monospace; color: var(--accent); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; }
+  .p-step .t { font-size: 0.95rem; font-weight: 600; color: var(--text-hi); }
+  .p-step .d { font-size: 0.78rem; color: var(--text-mid); line-height: 1.4; }
+  .p-arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.3rem; flex: 0 0 20px; }
+  .p-decide { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+  .p-branch { display: flex; align-items: center; gap: 0.9rem; margin-top: 1rem; }
+  .p-branch-arrow { color: var(--text-lo); font-size: 1.2rem; }
+  .p-llm { border: 1px dashed var(--line); border-radius: 12px; padding: 0.7rem 1.1rem; background: var(--bg-700);
+           font-size: 0.82rem; color: var(--text-mid); max-width: 46ch; }
+  .p-llm strong { color: var(--text-hi); }
+
+  /* five pillars grid (slide 4) */
+  .pillar-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 0.6rem; }
+  @media (max-width: 980px) { .pillar-wrap { grid-template-columns: 1fr; } }
+  .pillar-list { list-style: none; margin: 0; padding: 0; }
+  .pillar-list li {
+    border-top: 1px solid var(--line); padding: 0.6em 0; display: flex; flex-direction: column; gap: 0.15em;
+  }
+  .pillar-list li:first-child { border-top: none; }
+  .pillar-list .name { font-size: 0.92rem; font-weight: 700; color: var(--text-hi); }
+  .pillar-list .rc { font-size: 0.78rem; color: var(--text-mid); }
+  .pillar-list .name span.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 0.6em; }
+  .shot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  .shot-grid .shot { height: 15vh; }
+
+  /* graph showcase (slide 5) */
+  .graph-shot { height: 44vh; }
+  .graph-callouts { display: flex; gap: 1.6rem; margin-top: 0.7rem; flex-wrap: wrap; }
+  .graph-callouts .callout { line-height: 1.45; }
+  .callout { font-size: 0.82rem; color: var(--text-mid); max-width: 30ch; }
+  .callout strong { color: var(--accent); }
+
+  /* impact/scale (slide 6) */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2rem; max-width: 100%; }
+  @media (max-width: 980px) { .two-col { grid-template-columns: 1fr; } }
+  .box { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.3rem; background: var(--bg-800); }
+  .box h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-lo); margin: 0 0 0.6em; }
+  .box p { color: var(--text-mid); line-height: 1.5; font-size: 0.9rem; margin: 0 0 0.6em; }
+  .formula { font-family: "Cascadia Mono", "Consolas", monospace; color: var(--accent); font-size: 0.85rem; }
+
+  /* close (slide 7) */
+  .close-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 100%; margin-top: 0.8em; }
+  .close-grid h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-lo); margin: 0 0 0.5em; }
+  @media (max-width: 900px) { .close-grid { grid-template-columns: 1fr; } }
+  .tagline {
+    font-size: clamp(1.2rem, 2.1vw, 1.6rem); font-weight: 600; color: var(--text-hi);
+    max-width: 40ch; line-height: 1.4; margin-top: 1.4em; border-left: 3px solid var(--accent); padding-left: 0.9em;
+  }
+  .cta { margin-top: 1.4em; font-family: "Cascadia Mono", "Consolas", monospace; font-size: 0.85rem; color: var(--accent); }
+
+  /* print: one slide per landscape page, colors preserved */
+  @media print {
+    @page { size: landscape; margin: 0; }
+    html, body { height: auto; background: var(--bg-900) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    .deck { height: auto; overflow: visible; scroll-snap-type: none; }
+    .slide { height: 100vh; min-height: 100vh; page-break-after: always; break-after: page; scroll-snap-align: none; }
+    .slide:last-child { page-break-after: avoid; break-after: avoid; }
+    .rail, .hint { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="rail" id="rail"></div>
+<div class="hint">↓ scroll or press ↓ / j &nbsp;·&nbsp; slide <span id="hint-n">1</span> / 7</div>
+
+<div class="deck" id="deck">
+
+<section class="slide hero">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span></span></div>
+  <div class="eyebrow">OpenAI Codex Hackathon · AI Intelligence Platform for Data-Centre EPC Delivery</div>
+  <h1>The AI engineer that never misses a clause, and never guesses one</h1>
+  <p class="lede">Every data-centre build in India must satisfy hundreds of IS and CEA clauses across structural, electrical, fire and mechanical codes, checked today by exhausted humans, days after the drawing has already shipped. SiteMind reads the same documents in seconds, cites the real clause, and lets deterministic code, never the language model, decide pass or fail.</p>
+  <div class="stat-row">
+    <div class="stat-card"><div class="num">100% <span style="color:var(--text-lo);font-size:1.1rem;">vs 58.5%</span></div><div class="lbl">SiteMind vs. a naive-LLM baseline, same 41-case compliance benchmark, a real eval run, not an asserted number</div></div>
+    <div class="stat-card"><div class="num">0.0%</div><div class="lbl">Hallucinated-citation rate, measured on every run, re-verifiable live at <span class="metric">/api/eval/report</span></div></div>
+    <div class="stat-card"><div class="num">5</div><div class="lbl">Production AI pillars shipped, fully offline-capable, zero model training anywhere in the system</div></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-impact">Business Impact</span></span></div>
+  <div class="eyebrow">The problem</div>
+  <h1>A $15B pipeline, checked one tired reviewer at a time</h1>
+  <div class="split">
+    <div>
+      <p class="lede">India is building roughly $15B of hyperscale data-centre capacity by 2027. The brief's own diagnosis names the two biggest causes of overrun: <strong>procurement misalignment</strong> and <strong>commissioning failures</strong>, both downstream of the same root cause: nobody has time to cross-check hundreds of clauses against a live schedule and a live supply chain, all at once, every time a drawing changes.</p>
+      <ul class="points">
+        <li>A single missed clause costs an estimated 20 engineer-hours and ₹15L in rework, a disclosed assumption, not a measurement, and stated as one on every screen that uses it</li>
+        <li>RFI-CIV-073 sat open for six days before a human caught a 30mm footing cover against a 50mm IS 456 minimum. SiteMind flags it the second the drawing uploads</li>
+        <li>By the time a non-conformance reaches site review, the concrete is often already poured</li>
+      </ul>
+    </div>
+    <div class="shot"><div class="bar"><span></span><span></span><span></span><span class="cap">sitemind · /compliance</span></div><img src="../../ui_images/compliance.png" alt="Compliance Check screen"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></span></div>
+  <div class="eyebrow">Why this isn't "another RAG chatbot"</div>
+  <h1>We inverted the stack: retrieval and rules decide, the model only narrates</h1>
+  <p class="lede">Most AI compliance tools ask a language model to both find the rule and judge against it, which is exactly how citations get invented. SiteMind never lets the model vote on pass/fail.</p>
+  <div class="pipeline">
+    <div class="p-step"><div class="n">01</div><div class="t">Extract</div><div class="d">Parameter + its exact source sentence. Mandatory abstention on anything not confidently found.</div></div>
+    <div class="p-arrow">→</div>
+    <div class="p-step"><div class="n">02</div><div class="t">Retrieve</div><div class="d">The real, digitised IS/CEA clause that governs it, never paraphrased from model memory.</div></div>
+    <div class="p-arrow">→</div>
+    <div class="p-step p-decide"><div class="n">03</div><div class="t">Decide</div><div class="d">A deterministic Python threshold evaluated against that cited clause. Auditable. Reproducible.</div></div>
+    <div class="p-arrow">→</div>
+    <div class="p-step"><div class="n">04</div><div class="t">Cite &amp; act</div><div class="d">NCR or ADVISORY, cited to the exact clause, with a source-reliability badge.</div></div>
+  </div>
+  <div class="p-branch">
+    <div class="p-branch-arrow">⤷</div>
+    <div class="p-llm"><strong>The LLM only writes prose</strong>, handed the decision after step 03 is already final. It narrates what the code proved. It never gets a vote.</div>
+  </div>
+  <p class="footnote">A model that never decides can't quietly hallucinate a decision: that's the only reason a 0.0% hallucinated-citation rate is something we can measure and publish, not just claim.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-innovation">Innovation</span></span></div>
+  <div class="eyebrow">One connected platform, not five disconnected tools</div>
+  <h1>Five pillars, one shared graph of the same live project</h1>
+  <div class="pillar-wrap">
+    <ul class="pillar-list">
+      <li><div class="name"><span class="dot"></span>Compliance Agent</div><div class="rc">Catches design non-conformances before they reach site, the hero pillar</div></li>
+      <li><div class="name"><span class="dot"></span>Project Copilot</div><div class="rc">Cited hybrid-retrieval Q&amp;A; abstains below a similarity floor instead of guessing</div></li>
+      <li><div class="name"><span class="dot"></span>Schedule Risk</div><div class="rc">CPM + leading indicators, recomputed finish impact, 3-agent mitigation options</div></li>
+      <li><div class="name"><span class="dot"></span>Supply Chain</div><div class="rc">Multi-tier delay propagation, root-cause attribution, computed alternatives</div></li>
+      <li><div class="name"><span class="dot"></span>Commissioning QA</div><div class="rc">Deterministic pass/fail vs. a thermal envelope, exportable quality package</div></li>
+    </ul>
+    <div class="shot-grid">
+      <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/supply-chain.png" alt="Supply Chain screen"></div>
+      <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/schedule.png" alt="Schedule &amp; Risk screen"></div>
+      <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/commisioning_QA.png" alt="Commissioning QA screen"></div>
+      <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/overview_page.png" alt="Overview screen"></div>
+    </div>
+  </div>
+  <p class="footnote">Every pillar answers a root cause the brief itself names, not a generic feature checklist.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></span></div>
+  <div class="eyebrow">This is not a chat window</div>
+  <h1>A queryable graph of every decision: click a node, trace the proof</h1>
+  <div class="shot graph-shot"><div class="bar"><span></span><span></span><span></span><span class="cap">sitemind · /graph</span></div><img src="../../ui_images/KNOWLEDGE_graph.png" alt="Knowledge Graph screen"></div>
+  <div class="graph-callouts">
+    <div class="callout"><strong>Equipment → spec → standard → RFI:</strong> the connective tissue no single document shows, surfaced automatically from structured data the other five pillars already produced.</div>
+    <div class="callout"><strong>Not a RAG demo.</strong> A chatbot answers one question at a time and forgets. This graph is the platform's actual memory: inspectable, clickable, permanent.</div>
+    <div class="callout"><strong>Same footing, F-12,</strong> from slide 2, reachable here through its clause, its RFI, and its shop drawing, all cross-linked live.</div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-scale">Scalability</span></span></div>
+  <div class="eyebrow">Impact you can audit, and a platform that scales without retraining</div>
+  <h1>Every number has a formula. Every clause is one indexing job away.</h1>
+  <div class="two-col">
+    <div class="box">
+      <h3>Computed, not asserted</h3>
+      <p>Platform-wide ROI and Cost-at-Risk are both real formulas over real inputs, shown on-screen with every term, never a bare headline number.</p>
+      <div class="formula">cost = schedule_delay_cost<br>&nbsp;&nbsp;+ expedite_premium_cost<br>&nbsp;&nbsp;+ rework_exposure</div>
+      <p style="margin-top:0.8em;">21 eval scripts, each scored separately, never blended into one vanity metric.</p>
+    </div>
+    <div class="box">
+      <h3>Scales by adding clauses, not by retraining</h3>
+      <p>Zero ML training anywhere in this system. Breadth grows by indexing more corpora: IS 875, IS 13920, IS 800, IS 1893 Pt 4, NBC 2016 are next on the roadmap.</p>
+      <p><strong style="color:var(--text-hi);">Codebook</strong> packages the same trust engine as a standalone, MCP-consumable standards service. Any agent, not just SiteMind, can call <span class="metric">check_document_against_corpus</span> and get a cited verdict. Held-out eval: <span class="metric">30/30</span>.</p>
+    </div>
+  </div>
+  <p class="footnote">The compliance engine is clause-driven, not model-driven: every new standard is an indexing task, never an architecture change or a retrain.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="brand">SiteMind</span><span class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-scale">Scalability</span><span class="rubric-chip tag-ux">UX</span></span></div>
+  <div class="eyebrow">Honest close</div>
+  <h1>What's real, what's next, and why that honesty is the whole point</h1>
+  <div class="close-grid">
+    <div>
+      <h3>Real, today</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.92rem;">Every IS/CEA clause citation · the compliance decision logic · all 21 evals · document ingestion with mandatory abstention · the CPM schedule-impact recomputation · the Knowledge Graph.</p>
+    </div>
+    <div>
+      <h3>Representative, disclosed</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.92rem;">The pre-loaded project, documents and schedule are synthetic, modelled on real public Indian data-centre tenders. The standards and the logic that check them are real, and so is anything you upload yourself.</p>
+    </div>
+  </div>
+  <div class="tagline">Every other AI in construction tells you a story. SiteMind shows you the proof: a clause you can click, a decision you can audit, a number you can re-run.</div>
+  <div class="cta">Live: sitemind.awni.in</div>
+</section>
+
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = document.querySelectorAll('.slide');
+  const rail = document.getElementById('rail');
+  const hintN = document.getElementById('hint-n');
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    b.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    rail.appendChild(b);
+  });
+  const dots = rail.querySelectorAll('button');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        const idx = Array.from(slides).indexOf(e.target);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        hintN.textContent = idx + 1;
+      }
+    });
+  }, { threshold: 0.55 });
+  slides.forEach((s) => io.observe(s));
+  document.addEventListener('keydown', (e) => {
+    const active = Array.from(dots).findIndex((d) => d.classList.contains('active'));
+    if (['ArrowDown', 'j', 'PageDown'].includes(e.key) && active < slides.length - 1) {
+      slides[active + 1].scrollIntoView({ behavior: 'smooth' });
+    } else if (['ArrowUp', 'k', 'PageUp'].includes(e.key) && active > 0) {
+      slides[active - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+</script>
+
+</body>
+</html>

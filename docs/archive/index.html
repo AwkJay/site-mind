@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteMind — Presentation Deck</title>
+<style>
+  :root {
+    --bg-900: #0b0f14;
+    --bg-800: #11161d;
+    --bg-700: #1a212b;
+    --bg-600: #232c38;
+    --line: #2c3743;
+    --text-hi: #eaf0f6;
+    --text-mid: #9fb0bf;
+    --text-lo: #637382;
+    --accent: #bef264;
+    --accent-glow: rgba(190, 242, 100, 0.28);
+    --pass: #3bd671;
+    --info: #38bdf8;
+    --warning: #ffb020;
+    --critical: #ff5c5c;
+    --pass-bg: rgba(59, 214, 113, 0.12);
+    --info-bg: rgba(56, 189, 248, 0.12);
+    --warning-bg: rgba(255, 176, 32, 0.12);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg-900); color: var(--text-hi);
+    font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-blend-mode: overlay;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background: var(--bg-900); opacity: 0.92; z-index: -1; pointer-events: none;
+  }
+  .deck {
+    height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory;
+    scrollbar-width: thin;
+  }
+  .slide {
+    min-height: 100vh; scroll-snap-align: start;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 6vh 8vw 8vh; position: relative; border-bottom: 1px solid var(--line);
+  }
+  .slide-meta {
+    position: absolute; top: 4vh; left: 8vw; right: 8vw;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Cascadia Mono", "Consolas", monospace;
+    font-size: 0.72rem; color: var(--text-lo); letter-spacing: 0.04em;
+  }
+  .slide-num { font-variant-numeric: tabular-nums; }
+  .rubric-chip {
+    display: inline-flex; align-items: center; gap: 0.35em;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.28em 0.9em; font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .rubric-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tag-innovation { color: var(--accent); background: rgba(190,242,100,0.10); }
+  .tag-impact { color: var(--info); background: var(--info-bg); }
+  .tag-tech { color: var(--pass); background: var(--pass-bg); }
+  .tag-scale { color: var(--warning); background: var(--warning-bg); }
+  .tag-ux { color: var(--text-mid); background: var(--bg-700); }
+  .eyebrow {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 0.9em;
+  }
+  h1 {
+    font-family: "Segoe UI Semibold", "Inter", sans-serif;
+    font-size: clamp(1.8rem, 3.4vw, 3rem); line-height: 1.12; margin: 0 0 0.5em;
+    letter-spacing: -0.01em; max-width: 20ch; text-wrap: balance;
+  }
+  .lede {
+    font-size: clamp(1rem, 1.4vw, 1.25rem); color: var(--text-mid);
+    max-width: 62ch; line-height: 1.55; margin: 0 0 1.4em;
+  }
+  ul.points { list-style: none; margin: 0; padding: 0; max-width: 68ch; }
+  ul.points li {
+    position: relative; padding: 0.55em 0 0.55em 1.4em; font-size: 1.02rem;
+    line-height: 1.55; color: var(--text-hi); border-top: 1px solid var(--line);
+  }
+  ul.points li:first-child { border-top: none; }
+  ul.points li::before {
+    content: "→"; position: absolute; left: 0; color: var(--accent); font-family: monospace;
+  }
+  .quote {
+    font-size: clamp(1.2rem, 2vw, 1.6rem); font-style: normal; line-height: 1.5;
+    max-width: 46ch; color: var(--text-hi); border-left: 3px solid var(--accent);
+    padding-left: 1em; margin: 0.6em 0;
+  }
+  .metric { font-family: "Cascadia Mono", "Consolas", monospace; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .footnote {
+    margin-top: 1.6em; font-size: 0.78rem; color: var(--text-lo); max-width: 62ch; line-height: 1.5;
+  }
+  .hero .eyebrow { font-size: 0.85rem; }
+  .hero h1 { font-size: clamp(2.4rem, 5.5vw, 4.4rem); max-width: 26ch; }
+  .hero .lede { font-size: clamp(1.1rem, 1.6vw, 1.4rem); max-width: 58ch; }
+  .rail {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 7px; z-index: 10;
+  }
+  .rail button {
+    width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--line);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .rail button.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent-glow); width: 9px; height: 9px; }
+  .hint {
+    position: fixed; bottom: 18px; left: 8vw; font-size: 0.7rem; color: var(--text-lo);
+    font-family: "Cascadia Mono", "Consolas", monospace; letter-spacing: 0.03em; z-index: 10;
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; max-width: 78ch; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  .table-real {
+    border-collapse: collapse; font-size: 0.85rem; max-width: 68ch; margin-top: 0.5em;
+  }
+  .table-real th, .table-real td {
+    border: 1px solid var(--line); padding: 0.5em 0.9em; text-align: left;
+  }
+  .table-real th { color: var(--text-lo); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .table-real td { color: var(--text-mid); }
+  .close-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 78ch; margin-top: 0.6em; }
+  .close-grid h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-lo); margin: 0 0 0.5em; }
+  @media (max-width: 900px) { .close-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="rail" id="rail"></div>
+<div class="hint">↓ scroll or press ↓ / j &nbsp;·&nbsp; slide <span id="hint-n">1</span> / 16</div>
+
+<div class="deck" id="deck">
+
+<section class="slide hero">
+  <div class="slide-meta"><span class="slide-num">01 / 16</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">ET AI Hackathon 2026 · Problem #4</div>
+  <h1>SiteMind — the intelligence layer for data-centre EPC delivery</h1>
+  <p class="lede">India is building $15B of data-centre capacity by 2027. The brief names the two leading causes of schedule overrun: <strong>procurement misalignment</strong> and <strong>commissioning failures</strong>. One line, the brief's own numbers — nothing invented.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">02 / 16</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">The problem</div>
+  <h1>Information fragmentation, not information absence</h1>
+  <p class="lede">Design basis reports, submittals, RFIs, schedules, procurement status, quality records — all real, all disconnected, living in separate systems that never talk to each other.</p>
+  <div class="quote">SiteMind is one living intelligence layer over all of it — not a chatbot over documents. A decision layer.</div>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">03 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">The credibility thesis — stated up front</div>
+  <h1>The idea worth repeating three times</h1>
+  <div class="quote">Every citation resolves to real, verbatim, digitised Indian standard text.</div>
+  <div class="quote">Every pass/fail decision is plain Python, not an LLM guess.</div>
+  <div class="quote">If we can't verify it, we don't claim it.</div>
+  <p class="footnote">This is the actual differentiator — not a feature list.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">04 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-ux">UX</span></div>
+  <div class="eyebrow">Live demo — Compliance Agent (the hero)</div>
+  <h1>Reads the DBR like a senior structural reviewer would</h1>
+  <ul class="points">
+    <li>Upload a real DBR → extraction with exact source spans, mandatory abstention on the rest</li>
+    <li>NCRs cited to real IS 456 / 875 / 1893 clauses — plus a held-out electrical domain (IS 732 / 3043 / CEA / 8623)</li>
+    <li>The IS 1893 I=1.5 judgment-catch ADVISORY: "a Tier-III/IV DC is arguably a lifeline facility — confirm with EOR," cited to <em>both</em> governing clauses</li>
+    <li>Click a citation → the real clause opens, with a <strong>source-type provenance badge</strong> (manak-verified / primary native PDF / primary OCR scan / cross-source compiled) — never presented as equivalent</li>
+    <li>Action Brief: confidence enum (never a fabricated %), real RFI/schedule links or an honest "none found"</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">05 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">Live demo — a document SiteMind has never seen before</div>
+  <h1>Proving it isn't memorised</h1>
+  <p class="lede">The pre-loaded DBR could look rehearsed. Upload one of two real, never-ingested <span class="metric">.docx</span> files instead — both continuing the same generator/DRUPS story already on screen elsewhere, not a disconnected new example.</p>
+  <ul class="points">
+    <li>Generator-earthing addendum → 3 real HIGH NCRs (under-earthed frame, under-earthed neutral, high earth-grid resistance) + 1 conforming reading, each cited to a real CEA/IS 3043 clause</li>
+    <li>Generator-plinth shop drawing → a 35 mm footing cover trips the same overlap-resolution logic already shown on slide 4</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">06 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">Live demo — Schedule Risk + Multi-Agent Mitigation</div>
+  <h1>Mitigation options, not just alerts</h1>
+  <p class="lede">CPM + leading-indicator rules; a real re-computed project-finish impact — float correctly absorbs slips on non-critical activities, nothing is asserted. This is the literal answer to the brief's own words: the only place it names multi-agent specifically.</p>
+  <ul class="points">
+    <li>Procurement-alternative check — reuses Supply Chain's real viability arithmetic</li>
+    <li>Resequencing / float check — reads real CPM float</li>
+    <li>Resource / overtime-recovery check — real productivity-rate math</li>
+    <li>A plain coordinator collects every result, including non-viable ones, transparently</li>
+  </ul>
+  <p class="footnote">Stated plainly: a bounded multi-agent system, not a planning-loop framework — each agent is one real tool-call over data already in-process, never LLM reasoning.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">07 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">Live demo — Supply Chain Visibility, Alerts &amp; Evidence Linking</div>
+  <h1>Answering "procurement misalignment" directly</h1>
+  <ul class="points">
+    <li>Alerts panel — in-app, severity-tiered, <span class="metric">advance_warning_days</span> computed from real milestone data</li>
+    <li>A DRUPS shipment flagged at-risk, root cause traced three tiers deep to a tier-2 battery-cell customs delay in Shanghai — not just "vendor is late"</li>
+    <li>The computed alternative: a viable bridge-rental supplier, real lead time, real cost premium</li>
+    <li>A clickable evidence chip on <span class="metric">SHP-002</span> linking straight to <span class="metric">RFI-EL-112</span> and its schedule activity — computed live from a shared key, not typed onto a slide</li>
+    <li>Equipment-spec compliance chip (IS 8623-1:1993 MATCH) + an as-of-day disclosure banner: a computed snapshot, not a live carrier feed</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">08 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">Live demo — Commissioning QA</div>
+  <h1>Tier III/IV commissioning, cooling slice</h1>
+  <p class="lede">Upload the sample cooling test-log CSV live → deterministic PASS / within-allowable / FAIL against the ASHRAE TC9.9 thermal envelope → a real NCR for the Zone C failure → an exportable as-commissioned quality package.</p>
+  <p class="footnote">Said plainly, on screen: the envelope corpus is cross-source compiled (ASHRAE's book is paywalled), disclosed on every finding, never presented as manak-grade. This is the cooling slice only — the electrical/fire slice is a disclosed, deliberate gap (slide 14).</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">09 / 16</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-ux">UX</span></div>
+  <div class="eyebrow">Live demo — Copilot with hybrid retrieval</div>
+  <h1>Cited answers, or an honest "I don't know"</h1>
+  <ul class="points">
+    <li>Cross-document Q&amp;A, cited answers, "this RFI was resolved before"</li>
+    <li>Retrieval fuses BM25 keyword search with dense embeddings via Reciprocal Rank Fusion — better recall on exact-ID queries without touching the eval-calibrated abstention floor</li>
+    <li>Correct abstention on an off-topic question, shown live, not guessed — the floor is byte-identical before and after hybrid retrieval was added</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">10 / 16</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-ux">UX</span></div>
+  <div class="eyebrow">Live demo — the simulated clock</div>
+  <h1>Prove it, don't just assert it</h1>
+  <p class="lede">Click the Day N control, advance +14 or +20 days. Nothing in the underlying data changes — only time passing does — and every downstream number reacts correctly, live, on screen.</p>
+  <ul class="points">
+    <li>The schedule's at-risk count grows</li>
+    <li>An alert's <span class="metric">advance_warning_days</span> grows by exactly the days advanced</li>
+    <li>An alternative supplier that was viable can stop being viable as its arrival date is pushed out</li>
+    <li>Reset restores the exact baseline</li>
+  </ul>
+  <p class="footnote">The single best unscripted proof beat in the whole demo.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">11 / 16</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">ROI + Cost-at-Risk</div>
+  <h1>Both of the brief's explicit asks, computed</h1>
+  <div class="two-col">
+    <div>
+      <h3 style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-lo);margin:0 0 0.5em;">Hours / ₹ saved</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.95rem;">Platform-wide total with a per-pillar breakdown — Compliance NCRs, Schedule flags + CPM impact, Supply-Chain at-risk days, Commissioning FAILs — each traceable to a documented, conservative assumption. Directly answers "reduction in manual coordination effort measured in hours."</p>
+    </div>
+    <div>
+      <h3 style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-lo);margin:0 0 0.5em;">Cost-at-Risk</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.95rem;">Deterministic: <span class="metric">schedule_delay_cost + expedite_premium_cost + rework_exposure</span>. Every term's formula and real inputs shown. Answers "schedule AND cost risk modelling."</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">12 / 16</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">Proof</div>
+  <h1>Thirteen separate evals — never blended</h1>
+  <p class="lede">Rule-decision, extraction, electrical, equipment-spec, supply-chain, schedule, copilot, commissioning, impact-model, cost-risk, mitigation, alerting, hybrid-retrieval-fusion — thirteen different metrics measuring thirteen different things, reported separately on purpose.</p>
+  <p class="footnote">Blending them into one number was an earlier mistake this project caught and corrected — and stayed corrected as the pillar count grew from 3 to 5.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">13 / 16</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-scale">Scalability</span></div>
+  <div class="eyebrow">Architecture — where we are (and aren't) agentic</div>
+  <h1>Agentic where options are grounded, never where a check is binary</h1>
+  <ul class="points">
+    <li>The LLM only ever writes prose — every arrow into it labelled "prose only"</li>
+    <li>manak is a build-time dependency, not a live one</li>
+    <li>Agentic where a task is naturally multi-option and every option is a grounded computation (schedule mitigation)</li>
+    <li>Never agentic where a task is a single verifiable yes/no against a cited standard (compliance, commissioning, cost-risk)</li>
+  </ul>
+  <p class="footnote">The honest answer to "why not a fully agentic platform" — a stated position, not a dodge.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">14 / 16</span><span class="rubric-chip tag-scale">Scalability</span></div>
+  <div class="eyebrow">Scalability story</div>
+  <h1>Breadth scales by adding clauses, not by retraining</h1>
+  <div class="quote">Zero ML training anywhere in this system.</div>
+  <p class="lede">Roadmap, said not oversold: IS 875 all parts, IS 13920, IS 800, IS 1893 Pt 4, NBC 2016.</p>
+  <p class="footnote">The honest limit, said too: no live deployment in this delivery — video + repo, by choice, not by gap. A single project instance. No second-project proof yet.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">15 / 16</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">Business impact, mapped to the brief's own diagnosis</div>
+  <h1>Unit economics, not a market-size multiplication</h1>
+  <table class="table-real">
+    <tr><th>Pillar</th><th>Root cause it answers</th></tr>
+    <tr><td>Compliance Agent</td><td>Design non-conformances reaching site late</td></tr>
+    <tr><td>Supply Chain</td><td>Procurement misalignment</td></tr>
+    <tr><td>Commissioning QA</td><td>Commissioning failures</td></tr>
+    <tr><td>Schedule Risk</td><td>Late-discovered critical-path slip</td></tr>
+  </table>
+  <p class="footnote">Real, computed per-issue / per-shipment unit economics — explicitly not a project-level $ projection off the brief's $15B market figure, since SiteMind has no real project to base one on. That restraint is itself a credibility signal, said out loud.</p>
+</section>
+
+<section class="slide">
+  <div class="slide-meta"><span class="slide-num">16 / 16</span><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-scale">Scalability</span><span class="rubric-chip tag-ux">UX</span></div>
+  <div class="eyebrow">Honest close</div>
+  <h1>What's real, what's next</h1>
+  <div class="close-grid">
+    <div>
+      <h3>Real</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.92rem;">Every IS standard clause and citation · the compliance decision logic · both evals · document ingestion with mandatory abstention · the CPM schedule impact.</p>
+    </div>
+    <div>
+      <h3>Representative</h3>
+      <p style="color:var(--text-mid);line-height:1.55;font-size:0.92rem;">The pre-loaded project documents and schedule are synthetic, modelled on real public Indian DC tenders. The standards and the logic are real; so is anything you upload yourself.</p>
+    </div>
+  </div>
+  <p class="footnote" style="margin-top:1.4em;">Deliberately still out: Commissioning QA's electrical/fire slice (to be grounded in real Indian codes when built, not the paywalled TIA-942/BICSI/Uptime standards named in the brief — the more defensible choice) · live deployment · a second tenant project. Next: close those, in that order.</p>
+</section>
+
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = document.querySelectorAll('.slide');
+  const rail = document.getElementById('rail');
+  const hintN = document.getElementById('hint-n');
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    b.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    rail.appendChild(b);
+  });
+  const dots = rail.querySelectorAll('button');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        const idx = Array.from(slides).indexOf(e.target);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        hintN.textContent = idx + 1;
+      }
+    });
+  }, { threshold: 0.55 });
+  slides.forEach((s) => io.observe(s));
+  document.addEventListener('keydown', (e) => {
+    const active = Array.from(dots).findIndex((d) => d.classList.contains('active'));
+    if (['ArrowDown', 'j', 'PageDown'].includes(e.key) && active < slides.length - 1) {
+      slides[active + 1].scrollIntoView({ behavior: 'smooth' });
+    } else if (['ArrowUp', 'k', 'PageUp'].includes(e.key) && active > 0) {
+      slides[active - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteMind: Pitch Deck v3</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root {
+    --bg-900: #070505;
+    --bg-800: #120c0d;
+    --bg-700: #1c1314;
+    --bg-600: #271a1b;
+    --line: #3a2325;
+    --text-hi: #f5ece6;
+    --text-mid: #c7b3ad;
+    --text-lo: #8a7370;
+    --cream: #f6ded0;
+    --accent: #c81f38;
+    --accent-2: #6e0f1f;
+    --accent-soft: rgba(200, 31, 56, 0.18);
+    --accent-glow: rgba(200, 31, 56, 0.35);
+    --pass: #4ade80;
+    --info: #60a5fa;
+    --warning: #fbbf24;
+    --pass-bg: rgba(74, 222, 128, 0.12);
+    --info-bg: rgba(96, 165, 250, 0.12);
+    --warning-bg: rgba(251, 191, 36, 0.12);
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Manrope", system-ui, -apple-system, sans-serif;
+    --font-mono: "Cascadia Mono", "Consolas", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg-900); color: var(--text-hi);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  .deck {
+    height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory;
+    scrollbar-width: thin;
+  }
+  .slide {
+    min-height: 100vh; scroll-snap-align: start;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 11vh 7vw 6vh; position: relative; overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .slide::before {
+    content: ""; position: absolute; left: -6vw; bottom: -10vh; width: 42vw; height: 62%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 38%, transparent 72%);
+    clip-path: polygon(0 100%, 62% 100%, 0 18%);
+    opacity: 0.16; pointer-events: none; z-index: 0;
+  }
+  .slide > * { position: relative; z-index: 1; }
+
+  /* persistent header */
+  .header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5vh 3vw; background: linear-gradient(var(--bg-900) 60%, transparent);
+  }
+  .brand { display: flex; align-items: center; gap: 0.5em; }
+  .brand .icon { stroke: var(--accent); }
+  .brand .wordmark { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 1.05rem; color: var(--text-hi); }
+  .stagebar { display: flex; align-items: center; gap: 0.9rem; }
+  .stagebar .dots { display: flex; align-items: center; gap: 6px; }
+  .stagebar .dots button {
+    width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--line);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.15s;
+  }
+  .stagebar .dots button.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent-glow); width: 8px; height: 8px; }
+  .stagebar .label {
+    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-mid); min-width: 11ch;
+  }
+  .counter-pill {
+    font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-mid);
+    border: 1px solid var(--line); border-radius: 999px; padding: 0.35em 0.9em;
+  }
+  .counter-pill span { color: var(--accent); font-weight: 700; }
+  @media (max-width: 860px) { .stagebar .label { display: none; } }
+
+  .hint {
+    position: fixed; bottom: 16px; left: 7vw; font-size: 0.66rem; color: var(--text-lo);
+    font-family: var(--font-mono); letter-spacing: 0.03em; z-index: 20;
+  }
+
+  .rubric-chip {
+    display: inline-flex; align-items: center; gap: 0.35em;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.28em 0.85em; font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--font-body);
+  }
+  .rubric-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tag-innovation { color: var(--accent); background: var(--accent-soft); }
+  .tag-impact { color: var(--info); background: var(--info-bg); }
+  .tag-tech { color: var(--pass); background: var(--pass-bg); }
+  .tag-scale { color: var(--warning); background: var(--warning-bg); }
+  .tag-ux { color: var(--text-mid); background: var(--bg-700); }
+  .chips { display: flex; gap: 0.4em; position: absolute; top: 6.4vh; right: 3vw; z-index: 5; }
+
+  .eyebrow {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 0.9em;
+    font-family: var(--font-mono);
+  }
+  h1 {
+    font-family: var(--font-display); font-weight: 600; font-style: normal;
+    font-size: clamp(1.8rem, 3.1vw, 2.85rem); line-height: 1.12; margin: 0 0 0.45em;
+    letter-spacing: -0.01em; max-width: 21ch; text-wrap: balance; color: var(--text-hi);
+  }
+  .lede {
+    font-size: clamp(0.95rem, 1.3vw, 1.15rem); color: var(--text-mid);
+    max-width: 66ch; line-height: 1.55; margin: 0 0 1.1em; font-family: var(--font-body);
+  }
+  ul.points { list-style: none; margin: 0; padding: 0; max-width: 68ch; }
+  ul.points li {
+    position: relative; padding: 0.5em 0 0.5em 1.4em; font-size: 0.98rem;
+    line-height: 1.5; color: var(--text-hi); border-top: 1px solid var(--line);
+  }
+  ul.points li:first-child { border-top: none; }
+  ul.points li::before { content: "\2192"; position: absolute; left: 0; color: var(--accent); font-family: var(--font-mono); }
+  .quote {
+    font-family: var(--font-display); font-style: italic; font-weight: 500;
+    font-size: clamp(1.1rem, 1.8vw, 1.45rem); line-height: 1.5;
+    max-width: 52ch; color: var(--cream); border-left: 3px solid var(--accent);
+    padding-left: 1em; margin: 0.6em 0;
+  }
+  .metric { font-family: var(--font-mono); color: var(--accent); font-variant-numeric: tabular-nums; font-style: normal; }
+  .footnote { margin-top: 1.2em; font-size: 0.74rem; color: var(--text-lo); max-width: 66ch; line-height: 1.5; }
+
+  .icon { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .icon-sm { width: 15px; height: 15px; }
+  .icon-lg { width: 26px; height: 26px; }
+  .brand-icon { width: 15px; height: 15px; fill: var(--text-mid); stroke: none; flex-shrink: 0; }
+
+  /* numbered circle badge, the template's signature element */
+  .badge-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(160deg, var(--accent), var(--accent-2));
+    color: var(--cream); font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 0.9rem;
+  }
+
+  /* giant title-bar, used on the 4 "moment" slides */
+  .title-bar {
+    display: inline-flex; align-items: baseline; gap: 0.5rem;
+    padding: 0.25em 0.5em; margin: 0 0 0.7em -0.15em;
+  }
+  .title-bar .word {
+    font-family: var(--font-display); font-weight: 600; font-style: normal;
+    font-size: clamp(2.6rem, 6vw, 5rem); line-height: 1; color: var(--cream);
+    letter-spacing: -0.01em;
+  }
+  .title-bar .word em { color: var(--accent); font-style: italic; }
+
+  /* stat strip */
+  .stat-row { display: flex; gap: 1.4rem; margin: 1.4rem 0 0.8rem; flex-wrap: wrap; }
+  .stat-card {
+    border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.3rem;
+    background: var(--bg-800); min-width: 200px; flex: 1;
+  }
+  .stat-card .icon { margin-bottom: 0.55em; }
+  .stat-card .num { font-family: var(--font-mono); font-size: 1.85rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-card .lbl { font-size: 0.76rem; color: var(--text-mid); margin-top: 0.5em; line-height: 1.4; }
+
+  /* browser-frame screenshot component */
+  .shot { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg-800);
+          box-shadow: 0 24px 60px -24px rgba(0,0,0,0.75); }
+  .shot .bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: var(--bg-700); border-bottom: 1px solid var(--line); }
+  .shot .bar span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .shot .bar span:nth-child(1) { background: #ff5f57; }
+  .shot .bar span:nth-child(2) { background: #febc2e; }
+  .shot .bar span:nth-child(3) { background: #28c840; }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+  /* cover slide */
+  .cover-split { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; width: 100%; }
+  @media (max-width: 980px) { .cover-split { grid-template-columns: 1fr; } }
+  .cover-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-mid); margin-bottom: 1rem; }
+  .cover-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(2.6rem, 6.2vw, 5.4rem); line-height: 0.98; color: var(--cream); margin: 0 0 0.3em; letter-spacing: -0.015em; }
+  .cover-title .dot { color: var(--accent); }
+  .cover-tagline { font-size: clamp(1rem, 1.5vw, 1.2rem); color: var(--text-mid); max-width: 42ch; line-height: 1.5; margin-bottom: 1.3em; }
+  .cover-by { font-family: var(--font-display); font-style: italic; font-size: 1.15rem; color: var(--text-hi); }
+  .cover-shot { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+    box-shadow: 0 40px 90px -30px rgba(0,0,0,0.85); transform: rotate(1.2deg); }
+  .cover-shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, transparent 55%, rgba(7,5,5,0.55)); pointer-events: none; }
+  .cover-shot img { display: block; width: 100%; }
+
+  /* roadmap grid */
+  .roadmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem 1.6rem; margin-top: 1.4rem; max-width: 96%; }
+  @media (max-width: 980px) { .roadmap-grid { grid-template-columns: repeat(2, 1fr); } }
+  .roadmap-item { display: flex; align-items: center; gap: 0.8rem; }
+  .roadmap-item .t { font-family: var(--font-display); font-style: italic; font-size: 1.05rem; color: var(--text-hi); }
+
+  /* pipeline diagram */
+  .pipeline { display: flex; align-items: stretch; gap: 0.6rem; max-width: 100%; margin-top: 1.6rem; flex-wrap: nowrap; }
+  .p-step {
+    flex: 1; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-800);
+    padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0;
+  }
+  .p-step-head { display: flex; align-items: center; gap: 0.6rem; }
+  .p-step-head .badge-num { width: 26px; height: 26px; font-size: 0.78rem; }
+  .p-step .t { font-size: 0.95rem; font-weight: 700; color: var(--text-hi); font-family: var(--font-body); }
+  .p-step .d { font-size: 0.78rem; color: var(--text-mid); line-height: 1.4; }
+  .p-arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.3rem; flex: 0 0 20px; }
+  .p-decide { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+
+  /* tech stack diagram */
+  .tech-stack { margin-top: 1.1rem; }
+  .tech-stack-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-lo); margin-bottom: 0.55em; font-family: var(--font-mono); }
+  .tech-chip {
+    display: inline-flex; align-items: center; gap: 0.45em; border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.32em 0.85em 0.32em 0.6em; font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--text-hi); background: var(--bg-700);
+  }
+  .tech-chip .icon { stroke: var(--text-mid); }
+  .stack-diagram { display: flex; align-items: stretch; gap: 0.6rem; max-width: 100%; }
+  .stack-tier {
+    flex: 1; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-800);
+    padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0;
+  }
+  .stack-tier.accent { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+  .stack-tier-name { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
+  .stack-tier-items { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .stack-arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.1rem; flex: 0 0 18px; }
+
+  /* comparison chart */
+  .chart-wrap { display: flex; gap: 2.4rem; align-items: flex-end; margin-top: 1.5rem; }
+  .chart-compare {
+    display: flex; align-items: flex-end; gap: 2.6rem; height: 190px; padding: 0 0.5rem;
+    background-image: repeating-linear-gradient(var(--line) 0, var(--line) 1px, transparent 1px, transparent 25%);
+    background-position: top; flex: 0 0 auto;
+  }
+  .chart-col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; width: 110px; height: 100%; justify-content: flex-end; }
+  .chart-bar { width: 58px; border-radius: 8px 8px 3px 3px; position: relative; }
+  .chart-bar .val { position: absolute; top: -1.7rem; left: 0; right: 0; text-align: center; font-family: var(--font-mono); color: var(--text-hi); font-weight: 700; font-size: 1.05rem; }
+  .chart-bar.sitemind { height: 100%; background: linear-gradient(180deg, var(--accent), var(--accent-2)); box-shadow: 0 0 24px -6px var(--accent-glow); }
+  .chart-bar.baseline { height: 58.5%; background: var(--bg-700); border: 1px solid var(--line); }
+  .chart-label { font-size: 0.76rem; color: var(--text-mid); text-align: center; line-height: 1.3; max-width: 12ch; }
+  .chart-side { display: flex; flex-direction: column; gap: 0.9rem; justify-content: center; }
+
+  /* pillars */
+  .pillar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-top: 1.2rem; }
+  @media (max-width: 980px) { .pillar-grid { grid-template-columns: repeat(2, 1fr); } }
+  .pillar-card {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--bg-800);
+    padding: 1rem 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; min-height: 122px;
+  }
+  .pillar-card .head { display: flex; align-items: center; justify-content: space-between; }
+  .pillar-card .name { font-size: 0.86rem; font-weight: 700; color: var(--text-hi); font-family: var(--font-body); }
+  .pillar-card .val { font-size: 0.75rem; color: var(--text-mid); line-height: 1.35; }
+  .shot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; margin-top: 1rem; }
+  .shot-grid .shot { height: 13vh; }
+
+  /* graph showcase */
+  .graph-frame {
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-800);
+    box-shadow: 0 24px 60px -24px rgba(0,0,0,0.75); height: 34vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .graph-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .chain-box { border: 1px dashed var(--accent); border-radius: 12px; background: var(--bg-800); padding: 0.7rem 1.1rem; margin-top: 0.8rem; }
+  .chain-label { display: block; font-family: var(--font-mono); font-size: 0.64rem; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+  .chain { font-family: var(--font-mono); font-size: 0.86rem; color: var(--text-hi); word-break: break-word; }
+  .graph-callouts { display: flex; gap: 1.4rem; margin-top: 0.7rem; flex-wrap: wrap; }
+  .callout { font-size: 0.82rem; color: var(--text-mid); max-width: 34ch; line-height: 1.45; }
+  .callout strong { color: var(--accent); }
+
+  /* impact/scale */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2rem; max-width: 100%; }
+  @media (max-width: 980px) { .two-col { grid-template-columns: 1fr; } }
+  .box { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.3rem; background: var(--bg-800); }
+  .box h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-lo); margin: 0 0 0.6em; font-family: var(--font-mono); }
+  .box p { color: var(--text-mid); line-height: 1.5; font-size: 0.9rem; margin: 0 0 0.6em; }
+  .corpus-chip {
+    display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px;
+    padding: 0.32em 0.9em; font-size: 0.7rem; font-family: var(--font-mono);
+    color: var(--text-mid); margin: 0.25em 0.35em 0 0;
+  }
+
+  /* close */
+  .tagline {
+    font-family: var(--font-display); font-style: italic; font-weight: 500;
+    font-size: clamp(1.25rem, 2.2vw, 1.65rem); color: var(--cream);
+    max-width: 42ch; line-height: 1.4; margin-top: 1.1em; border-left: 3px solid var(--accent); padding-left: 0.9em;
+  }
+  .cta { margin-top: 1.4em; font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); }
+
+  @media print {
+    @page { size: landscape; margin: 0; }
+    html, body { height: auto; background: var(--bg-900) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    .deck { height: auto; overflow: visible; scroll-snap-type: none; }
+    .slide { height: 100vh; min-height: 100vh; page-break-after: always; break-after: page; scroll-snap-align: none; }
+    .slide:last-child { page-break-after: avoid; break-after: avoid; }
+    .header, .hint { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8,12.5 11,15.5 16.5,9"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-4 4V5z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/><polyline points="8.5,12 11,14.5 15.5,9.5"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v10H10l-3.5 3.5V15H4V5z"/><circle cx="9" cy="10" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="0.8" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="0.8" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,6.5 12,12 16,14.5"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><polyline points="4.5,7.5 12,12 19.5,7.5"/><line x1="12" y1="12" x2="12" y2="21"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="15.5" y2="11.5"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-graph-node" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="10.3" y2="16"/><line x1="16" y1="7.2" x2="13.7" y2="16"/><line x1="8.4" y1="6" x2="15.6" y2="6"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="4" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="21" y2="20"/><rect x="7" y="13" width="3" height="7"/><rect x="12" y="9" width="3" height="11"/><rect x="17" y="6" width="3" height="14"/></symbol>
+  <symbol id="i-atom" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)"/></symbol>
+  <symbol id="logo-python" viewBox="0 0 24 24"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></symbol>
+  <symbol id="logo-fastapi" viewBox="0 0 24 24"><path d="M12 .0387C5.3729.0384.0003 5.3931 0 11.9988c-.001 6.6066 5.372 11.9628 12 11.9625 6.628.0003 12.001-5.3559 12-11.9625-.0003-6.6057-5.3729-11.9604-12-11.96m-.829 5.4153h7.55l-7.5805 5.3284h5.1828L5.279 18.5436q2.9466-6.5444 5.892-13.0896"/></symbol>
+  <symbol id="logo-nextjs" viewBox="0 0 24 24"><path d="M18.665 21.978C16.758 23.255 14.465 24 12 24 5.377 24 0 18.623 0 12S5.377 0 12 0s12 5.377 12 12c0 3.583-1.574 6.801-4.067 9.001L9.219 7.2H7.2v9.596h1.615V9.251l9.85 12.727Zm-3.332-8.533 1.6 2.061V7.2h-1.6v6.245Z"/></symbol>
+  <symbol id="logo-typescript" viewBox="0 0 24 24"><path d="M1.125 0C.502 0 0 .502 0 1.125v21.75C0 23.498.502 24 1.125 24h21.75c.623 0 1.125-.502 1.125-1.125V1.125C24 .502 23.498 0 22.875 0zm17.363 9.75c.612 0 1.154.037 1.627.111a6.38 6.38 0 0 1 1.306.34v2.458a3.95 3.95 0 0 0-.643-.361 5.093 5.093 0 0 0-.717-.26 5.453 5.453 0 0 0-1.426-.2c-.3 0-.573.028-.819.086a2.1 2.1 0 0 0-.623.242c-.17.104-.3.229-.393.374a.888.888 0 0 0-.14.49c0 .196.053.373.156.529.104.156.252.304.443.444s.423.276.696.41c.273.135.582.274.926.416.47.197.892.407 1.266.628.374.222.695.473.963.753.268.279.472.598.614.957.142.359.214.776.214 1.253 0 .657-.125 1.21-.373 1.656a3.033 3.033 0 0 1-1.012 1.085 4.38 4.38 0 0 1-1.487.596c-.566.12-1.163.18-1.79.18a9.916 9.916 0 0 1-1.84-.164 5.544 5.544 0 0 1-1.512-.493v-2.63a5.033 5.033 0 0 0 3.237 1.2c.333 0 .624-.03.872-.09.249-.06.456-.144.623-.25.166-.108.29-.234.373-.38a1.023 1.023 0 0 0-.074-1.089 2.12 2.12 0 0 0-.537-.5 5.597 5.597 0 0 0-.807-.444 27.72 27.72 0 0 0-1.007-.436c-.918-.383-1.602-.852-2.053-1.405-.45-.553-.676-1.222-.676-2.005 0-.614.123-1.141.369-1.582.246-.441.58-.804 1.004-1.089a4.494 4.494 0 0 1 1.47-.629 7.536 7.536 0 0 1 1.77-.201zm-15.113.188h9.563v2.166H9.506v9.646H6.789v-9.646H3.375z"/></symbol>
+  <symbol id="logo-tailwind" viewBox="0 0 24 24"><path d="M12.001,4.8c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624 C13.666,10.618,15.027,12,18.001,12c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624 C16.337,6.182,14.976,4.8,12.001,4.8z M6.001,12c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624 c1.177,1.194,2.538,2.576,5.512,2.576c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624 C10.337,13.382,8.976,12,6.001,12z"/></symbol>
+  <symbol id="logo-scikit" viewBox="0 0 24 24"><path d="M15.601 5.53c-1.91.035-3.981.91-5.63 2.56-2.93 2.93-2.083 8.53-1.088 9.525.805.804 6.595 1.843 9.526-1.088a9.74 9.74 0 0 0 .584-.643c.043-.292.205-.66.489-1.106a1.848 1.848 0 0 1-.537.176c-.144.265-.37.55-.676.855-.354.335-.607.554-.76.656a.795.795 0 0 1-.437.152c-.35 0-.514-.308-.494-.924-.22.316-.425.549-.612.7a.914.914 0 0 1-.578.224c-.194 0-.36-.09-.496-.273a1.03 1.03 0 0 1-.193-.507 4.016 4.016 0 0 1-.726.583c-.224.132-.47.197-.74.197-.3 0-.543-.096-.727-.288a.978.978 0 0 1-.257-.524v.004c-.3.276-.564.48-.79.611a1.295 1.295 0 0 1-.649.197.693.693 0 0 1-.571-.275c-.145-.183-.218-.43-.218-.739 0-.464.101-1.02.302-1.67.201-.65.445-1.25.733-1.797l.842-.312a.21.21 0 0 1 .06-.013c.063 0 .116.047.157.14.04.095.061.221.061.38 0 .451-.104.888-.312 1.31-.207.422-.532.873-.974 1.352-.018.23-.027.388-.027.474 0 .193.036.345.106.458.071.113.165.169.282.169a.71.71 0 0 0 .382-.13c.132-.084.333-.26.602-.523.028-.418.187-.798.482-1.142.324-.38.685-.569 1.08-.569.206 0 .37.054.494.16a.524.524 0 0 1 .186.417c0 .458-.486.829-1.459 1.114.088.43.32.646.693.646a.807.807 0 0 0 .417-.117c.129-.076.321-.243.575-.497.032-.252.118-.495.259-.728.182-.3.416-.544.701-.73.285-.185.537-.278.756-.278.276 0 .47.127.58.381l.677-.374h.186l-.292.971c-.15.488-.226.823-.226 1.004 0 .19.067.285.202.285.086 0 .181-.045.285-.137.104-.092.25-.232.437-.42v.001c.143-.155.274-.32.392-.494-.19-.084-.285-.21-.285-.375 0-.17.058-.352.174-.545.116-.194.275-.29.479-.29.172 0 .258.088.258.265 0 .139-.05.338-.149.596.367-.04.687-.32.961-.842l.228-.01c1.059-2.438.828-5.075-.83-6.732-1.019-1.02-2.408-1.5-3.895-1.471zm4.725 8.203a8.938 8.938 0 0 1-1.333 2.151 1.09 1.09 0 0 0-.012.147c0 .168.047.309.14.423.092.113.206.17.34.17.296 0 .714-.264 1.254-.787-.001.04-.003.08-.003.121 0 .146.012.368.036.666l.733-.172c0-.2.003-.357.01-.474.01-.157.033-.33.066-.517.02-.11.07-.216.152-.315l.186-.216a5.276 5.276 0 0 1 .378-.397c.062-.055.116-.099.162-.13a.26.26 0 0 1 .123-.046c.055 0 .083.035.083.106 0 .07-.052.236-.156.497-.194.486-.292.848-.292 1.084 0 .175.046.314.136.418a.45.45 0 0 0 .358.155c.365 0 .803-.269 1.313-.808v-.381c-.361.426-.623.64-.784.64-.109 0-.163-.067-.163-.2 0-.1.065-.316.195-.65.19-.486.285-.836.285-1.048a.464.464 0 0 0-.112-.319.36.36 0 0 0-.282-.127c-.165 0-.354.077-.567.233-.213.156-.5.436-.863.84.053-.262.165-.622.335-1.08l-.809.156a6.54 6.54 0 0 0-.399 1.074c-.04.156-.07.316-.092.48a7.447 7.447 0 0 1-.49.45.38.38 0 0 1-.229.08.208.208 0 0 1-.174-.082.352.352 0 0 1-.064-.222c0-.1.019-.214.056-.343.038-.13.12-.373.249-.731l.308-.849zm-17.21-2.927c-.863-.016-1.67.263-2.261.854-1.352 1.352-1.07 3.827.631 5.527 1.7 1.701 4.95 1.21 5.527.632.467-.466 1.07-3.827-.631-5.527-.957-.957-2.158-1.465-3.267-1.486zm12.285.358h.166v.21H15.4zm.427 0h.166v.865l.46-.455h.195l-.364.362.428.684h-.198l-.357-.575-.164.166v.41h-.166zm1.016 0h.166v.21h-.166zm.481.122h.166v.288h.172v.135h-.172v.717c0 .037.006.062.02.075.012.013.037.02.074.02a.23.23 0 0 0 .078-.01v.141a.802.802 0 0 1-.136.014.23.23 0 0 1-.15-.043.15.15 0 0 1-.052-.123v-.79h-.141v-.136h.141zm-3.562.258c.081 0 .15.012.207.038.057.024.1.061.13.11s.045.106.045.173h-.176c-.006-.111-.075-.167-.208-.167a.285.285 0 0 0-.164.041.134.134 0 0 0-.06.117c0 .035.015.065.045.088.03.024.08.044.15.06l.16.039a.47.47 0 0 1 .224.105c.047.046.07.108.07.186a.3.3 0 0 1-.052.175.327.327 0 0 1-.152.116.585.585 0 0 1-.226.041c-.136 0-.24-.03-.309-.088-.069-.059-.105-.149-.109-.269h.176c.004.037.01.065.017.084a.166.166 0 0 0 .034.054c.044.043.112.065.204.065a.31.31 0 0 0 .177-.045.139.139 0 0 0 .067-.119.116.116 0 0 0-.038-.09.287.287 0 0 0-.124-.055l-.156-.038a1.248 1.248 0 0 1-.159-.05.359.359 0 0 1-.098-.061.22.22 0 0 1-.058-.083.32.32 0 0 1-.016-.108c0-.096.036-.174.109-.232a.45.45 0 0 1 .29-.087zm1.035 0a.46.46 0 0 1 .202.043.351.351 0 0 1 .187.212.577.577 0 0 1 .023.126h-.168a.256.256 0 0 0-.078-.168.242.242 0 0 0-.17-.06.248.248 0 0 0-.155.05.306.306 0 0 0-.1.144.662.662 0 0 0-.034.224.58.58 0 0 0 .035.214.299.299 0 0 0 .101.135.261.261 0 0 0 .157.048c.142 0 .227-.084.256-.252h.167a.519.519 0 0 1-.065.22.35.35 0 0 1-.146.138.464.464 0 0 1-.216.048.448.448 0 0 1-.246-.066.441.441 0 0 1-.161-.192.703.703 0 0 1-.057-.293c0-.085.01-.163.032-.233a.522.522 0 0 1 .095-.182.403.403 0 0 1 .15-.117.453.453 0 0 1 .191-.04zm.603.03h.166v1.046H15.4zm1.443 0h.166v1.046h-.166zm-5.05.618c-.08 0-.2.204-.356.611-.155.407-.308.977-.459 1.71.281-.312.509-.662.683-1.05.175-.387.262-.72.262-.999a.455.455 0 0 0-.036-.197c-.025-.05-.056-.075-.093-.075zm4.662 1.797c-.221 0-.431.188-.629.563-.197.376-.296.722-.296 1.038 0 .12.029.216.088.29a.273.273 0 0 0 .223.111c.221 0 .43-.188.625-.565.196-.377.294-.725.294-1.043a.457.457 0 0 0-.083-.29.269.269 0 0 0-.222-.104zm-2.848.007c-.146 0-.285.11-.417.333-.133.222-.2.51-.2.866.566-.159.849-.452.849-.881 0-.212-.077-.318-.232-.318Z"/></symbol>
+  <symbol id="logo-huggingface" viewBox="0 0 24 24"><path d="M12.025 1.13c-5.77 0-10.449 4.647-10.449 10.378 0 1.112.178 2.181.503 3.185.064-.222.203-.444.416-.577a.96.96 0 0 1 .524-.15c.293 0 .584.124.84.284.278.173.48.408.71.694.226.282.458.611.684.951v-.014c.017-.324.106-.622.264-.874s.403-.487.762-.543c.3-.047.596.06.787.203s.31.313.4.467c.15.257.212.468.233.542.01.026.653 1.552 1.657 2.54.616.605 1.01 1.223 1.082 1.912.055.537-.096 1.059-.38 1.572.637.121 1.294.187 1.967.187.657 0 1.298-.063 1.921-.178-.287-.517-.44-1.041-.384-1.581.07-.69.465-1.307 1.081-1.913 1.004-.987 1.647-2.513 1.657-2.539.021-.074.083-.285.233-.542.09-.154.208-.323.4-.467a1.08 1.08 0 0 1 .787-.203c.359.056.604.29.762.543s.247.55.265.874v.015c.225-.34.457-.67.683-.952.23-.286.432-.52.71-.694.257-.16.547-.284.84-.285a.97.97 0 0 1 .524.151c.228.143.373.388.43.625l.006.04a10.3 10.3 0 0 0 .534-3.273c0-5.731-4.678-10.378-10.449-10.378M8.327 6.583a1.5 1.5 0 0 1 .713.174 1.487 1.487 0 0 1 .617 2.013c-.183.343-.762-.214-1.102-.094-.38.134-.532.914-.917.71a1.487 1.487 0 0 1 .69-2.803m7.486 0a1.487 1.487 0 0 1 .689 2.803c-.385.204-.536-.576-.916-.71-.34-.12-.92.437-1.103.094a1.487 1.487 0 0 1 .617-2.013 1.5 1.5 0 0 1 .713-.174m-10.68 1.55a.96.96 0 1 1 0 1.921.96.96 0 0 1 0-1.92m13.838 0a.96.96 0 1 1 0 1.92.96.96 0 0 1 0-1.92M8.489 11.458c.588.01 1.965 1.157 3.572 1.164 1.607-.007 2.984-1.155 3.572-1.164.196-.003.305.12.305.454 0 .886-.424 2.328-1.563 3.202-.22-.756-1.396-1.366-1.63-1.32q-.011.001-.02.006l-.044.026-.01.008-.03.024q-.018.017-.035.036l-.032.04a1 1 0 0 0-.058.09l-.014.025q-.049.088-.11.19a1 1 0 0 1-.083.116 1.2 1.2 0 0 1-.173.18q-.035.029-.075.058a1.3 1.3 0 0 1-.251-.243 1 1 0 0 1-.076-.107c-.124-.193-.177-.363-.337-.444-.034-.016-.104-.008-.2.022q-.094.03-.216.087-.06.028-.125.063l-.13.074q-.067.04-.136.086a3 3 0 0 0-.135.096 3 3 0 0 0-.26.219 2 2 0 0 0-.12.121 2 2 0 0 0-.106.128l-.002.002a2 2 0 0 0-.09.132l-.001.001a1.2 1.2 0 0 0-.105.212q-.013.036-.024.073c-1.139-.875-1.563-2.317-1.563-3.203 0-.334.109-.457.305-.454m.836 10.354c.824-1.19.766-2.082-.365-3.194-1.13-1.112-1.789-2.738-1.789-2.738s-.246-.945-.806-.858-.97 1.499.202 2.362c1.173.864-.233 1.45-.685.64-.45-.812-1.683-2.896-2.322-3.295s-1.089-.175-.938.647 2.822 2.813 2.562 3.244-1.176-.506-1.176-.506-2.866-2.567-3.49-1.898.473 1.23 2.037 2.16c1.564.932 1.686 1.178 1.464 1.53s-3.675-2.511-4-1.297c-.323 1.214 3.524 1.567 3.287 2.405-.238.839-2.71-1.587-3.216-.642-.506.946 3.49 2.056 3.522 2.064 1.29.33 4.568 1.028 5.713-.624m5.349 0c-.824-1.19-.766-2.082.365-3.194 1.13-1.112 1.789-2.738 1.789-2.738s.246-.945.806-.858.97 1.499-.202 2.362c-1.173.864.233 1.45.685.64.451-.812 1.683-2.896 2.322-3.295s1.089-.175.938.647-2.822 2.813-2.562 3.244 1.176-.506 1.176-.506 2.866-2.567 3.49-1.898-.473 1.23-2.037 2.16c-1.564.932-1.686 1.178-1.464 1.53s3.675-2.511 4-1.297c.323 1.214-3.524 1.567-3.287 2.405.238.839 2.71-1.587 3.216-.642.506.946-3.49 2.056-3.522 2.064-1.29.33-4.568 1.028-5.713-.624"/></symbol>
+</defs>
+</svg>
+
+<div class="header">
+  <div class="brand"><svg class="icon icon-sm"><use href="#i-graph-node"></use></svg><span class="wordmark">SiteMind</span></div>
+  <div class="stagebar">
+    <span class="label" id="stage-label">Cover</span>
+    <div class="dots" id="dots"></div>
+  </div>
+  <div class="counter-pill"><span id="counter-n">01</span> / 10</div>
+</div>
+<div class="hint">&darr; scroll or press &darr; / j</div>
+
+<div class="deck" id="deck">
+
+<section class="slide" data-stage="Cover">
+  <div class="cover-split">
+    <div>
+      <div class="cover-eyebrow">ET AI Hackathon 2026 &middot; Problem #4</div>
+      <h1 class="cover-title">Site<span class="dot">Mind</span></h1>
+      <p class="cover-tagline">The verification layer for data-center EPC delivery. Design-basis compliance, checked against real code, in seconds instead of days.</p>
+      <div class="cover-by">Presented by the SiteMind team</div>
+    </div>
+    <div class="cover-shot">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <img src="../../ui_images/compliance.png" alt="SiteMind Compliance Agent screen">
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Roadmap">
+  <div class="title-bar"><span class="word">The <em>Plan</em></span></div>
+  <div class="roadmap-grid">
+    <div class="roadmap-item"><span class="badge-num">1</span><span class="t">Problem</span></div>
+    <div class="roadmap-item"><span class="badge-num">2</span><span class="t">Why Tools Fail</span></div>
+    <div class="roadmap-item"><span class="badge-num">3</span><span class="t">Solution</span></div>
+    <div class="roadmap-item"><span class="badge-num">4</span><span class="t">How It Works</span></div>
+    <div class="roadmap-item"><span class="badge-num">5</span><span class="t">Product Tour</span></div>
+    <div class="roadmap-item"><span class="badge-num">6</span><span class="t">Why We're Different</span></div>
+    <div class="roadmap-item"><span class="badge-num">7</span><span class="t">Impact &amp; Scale</span></div>
+    <div class="roadmap-item"><span class="badge-num">8</span><span class="t">Vision</span></div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Problem">
+  <div class="chips"><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">01 &middot; The Problem</div>
+  <h1>One Missed Number on a Drawing Can Stop a $15B Data Center.</h1>
+  <p class="lede">Every submittal for a hyperscale data center must match hundreds of pages of structural and electrical code. Today, a senior engineer checks this by hand, and a single overlooked clause can mean months of rework, or a facility that isn't safe to power on.</p>
+  <div class="quote">A footing poured at <span class="metric">30mm</span> nominal cover, against the <span class="metric">50mm</span> legal minimum (IS 456:2000 Cl. 26.4.2.2). By the time a human reviewer catches it, the concrete has already set.</div>
+</section>
+
+<section class="slide" data-stage="Why Tools Fail">
+  <div class="chips"><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-innovation">Innovation</span></div>
+  <div class="eyebrow">02 &middot; The Gaps We Found</div>
+  <h1>Manual Review Is Too Slow. Generic AI Tools Guess.</h1>
+  <ul class="points">
+    <li><strong>Manual Review:</strong> A senior engineer reads hundreds of pages by hand, days per document, and still misses what humans miss.</li>
+    <li><strong>Generic RAG/Chatbot Tools:</strong> Retrieve a paragraph and let a language model decide if it's compliant, with no guardrail against the model fabricating a citation.</li>
+    <li><strong>Spreadsheets and Checklists:</strong> Static, don't scale to hundreds of Indian Standard clauses, and can't automatically link an issue to the RFI, schedule task, and shipment it affects.</li>
+  </ul>
+  <div class="footnote">Industry context, not a SiteMind metric: 67% of data-centre EPC projects in the Asia-Pacific region overrun schedule by more than 10%, per the Townsend survey cited in this hackathon's own problem brief. Procurement misalignment and commissioning failures are named as the leading causes.</div>
+</section>
+
+<section class="slide" data-stage="Solution">
+  <div class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span></div>
+  <div class="eyebrow">03 &middot; Introducing SiteMind</div>
+  <div class="title-bar"><span class="word">Not a <em>Guess</em>.</span></div>
+  <p class="lede" style="margin-top:-0.3em;">SiteMind reads a Design Basis Report or submittal, extracts every engineering parameter with its exact source sentence, and checks it against a real, cited Indian Standard (IS/CEA) clause in seconds. Deterministic verification, not a language model's opinion.</p>
+  <div class="chart-wrap">
+    <div class="chart-compare">
+      <div class="chart-col"><div class="chart-bar sitemind"><span class="val">100%</span></div></div>
+      <div class="chart-col"><div class="chart-bar baseline"><span class="val">58.5%</span></div></div>
+    </div>
+    <div class="chart-side">
+      <div class="chart-label" style="text-align:left;max-width:20ch;"><strong style="color:var(--accent)">SiteMind</strong> vs <strong style="color:var(--text-mid)">naive-LLM baseline</strong>, rule-decision accuracy, n=41 boundary cases (backend/eval/report.json)</div>
+    </div>
+    <div class="stat-row" style="margin:0;">
+      <div class="stat-card"><svg class="icon"><use href="#i-shield"></use></svg><div class="num">0.0%</div><div class="lbl">Measured Hallucinated-Citation Rate, All Production Validations</div></div>
+      <div class="stat-card"><svg class="icon"><use href="#i-atom"></use></svg><div class="num">5</div><div class="lbl">Offline-Capable AI Pillars, Each Verified by a Real Eval Run</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-stage="How It Works">
+  <div class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">04 &middot; System Architecture</div>
+  <h1>Inverting the Stack: Rules Decide, Models Narrate</h1>
+  <p class="lede">We never let an LLM vote on pass/fail compliance. SiteMind uses language models exclusively to generate prose explanations after mathematical Python checks finish execution.</p>
+  <div class="pipeline">
+    <div class="p-step"><div class="p-step-head"><span class="badge-num">1</span><svg class="icon icon-sm"><use href="#i-search"></use></svg></div><div class="t">Extract</div><div class="d">Pulls raw engineering parameters with explicit text source spans.</div></div>
+    <div class="p-arrow">&rarr;</div>
+    <div class="p-step"><div class="p-step-head"><span class="badge-num">2</span><svg class="icon icon-sm"><use href="#i-book"></use></svg></div><div class="t">Retrieve</div><div class="d">Fetches exact, digitised legal IS/CEA clause codes from the project Codebook.</div></div>
+    <div class="p-arrow">&rarr;</div>
+    <div class="p-step p-decide"><div class="p-step-head"><span class="badge-num">3</span><svg class="icon icon-sm"><use href="#i-check-circle"></use></svg></div><div class="t">Decide</div><div class="d">Mathematical Python scripts execute deterministic threshold checks.</div></div>
+    <div class="p-arrow">&rarr;</div>
+    <div class="p-step"><div class="p-step-head"><span class="badge-num">4</span><svg class="icon icon-sm"><use href="#i-message"></use></svg></div><div class="t">Narrate</div><div class="d">The LLM translates the hard code verdict into an auditable compliance log.</div></div>
+  </div>
+  <div class="tech-stack">
+    <div class="tech-stack-label">Real Stack, Three Layers</div>
+    <div class="stack-diagram">
+      <div class="stack-tier">
+        <div class="stack-tier-name">Frontend</div>
+        <div class="stack-tier-items">
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-nextjs"></use></svg>Next.js 14</span>
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-typescript"></use></svg>TypeScript</span>
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-tailwind"></use></svg>Tailwind</span>
+          <span class="tech-chip"><svg class="icon icon-sm"><use href="#i-chart"></use></svg>Recharts</span>
+        </div>
+      </div>
+      <div class="stack-arrow">&rarr;</div>
+      <div class="stack-tier">
+        <div class="stack-tier-name">Backend API</div>
+        <div class="stack-tier-items">
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-fastapi"></use></svg>FastAPI</span>
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-python"></use></svg>Python</span>
+        </div>
+      </div>
+      <div class="stack-arrow">&rarr;</div>
+      <div class="stack-tier accent">
+        <div class="stack-tier-name">Rules + Retrieval</div>
+        <div class="stack-tier-items">
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-scikit"></use></svg>scikit-learn</span>
+          <span class="tech-chip"><svg class="brand-icon"><use href="#logo-huggingface"></use></svg>sentence-transformers</span>
+          <span class="tech-chip"><svg class="icon icon-sm"><use href="#i-graph-node"></use></svg>NetworkX</span>
+        </div>
+      </div>
+    </div>
+    <div class="footnote" style="margin-top:0.5em;">No model training anywhere. No agent-orchestration framework. An optional LLM (Anthropic/OpenAI) writes prose only, gated by OFFLINE_MODE.</div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Product Tour">
+  <div class="chips"><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-innovation">Innovation</span></div>
+  <div class="eyebrow">05 &middot; One Shared Graph, Five Disciplines</div>
+  <h1>One Shared Graph Over Five Disconnected Disciplines</h1>
+  <div class="pillar-grid">
+    <div class="pillar-card"><div class="head"><span class="badge-num">1</span><svg class="icon icon-lg"><use href="#i-shield"></use></svg></div><div class="name">Compliance Agent</div><div class="val">Catches design non-conformances before casting or procurement approval.</div></div>
+    <div class="pillar-card"><div class="head"><span class="badge-num">2</span><svg class="icon icon-lg"><use href="#i-chat"></use></svg></div><div class="name">Project Copilot</div><div class="val">Fuses BM25 and dense embeddings to detect previously resolved site RFIs.</div></div>
+    <div class="pillar-card"><div class="head"><span class="badge-num">3</span><svg class="icon icon-lg"><use href="#i-clock"></use></svg></div><div class="name">Schedule Risk</div><div class="val">Recomputes critical path float delays against active weather and labor constraints.</div></div>
+    <div class="pillar-card"><div class="head"><span class="badge-num">4</span><svg class="icon icon-lg"><use href="#i-box"></use></svg></div><div class="name">Supply Chain</div><div class="val">Traces component latency three tiers deep, e.g. Shanghai battery cell customs.</div></div>
+    <div class="pillar-card"><div class="head"><span class="badge-num">5</span><svg class="icon icon-lg"><use href="#i-gauge"></use></svg></div><div class="name">Commissioning QA</div><div class="val">Runs deterministic pass/fail validation against the ASHRAE cooling envelope.</div></div>
+  </div>
+  <div class="shot-grid">
+    <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/supply-chain.png" alt="Supply Chain screen"></div>
+    <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/schedule.png" alt="Schedule &amp; Risk screen"></div>
+    <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/commisioning_QA.png" alt="Commissioning QA screen"></div>
+    <div class="shot"><div class="bar"><span></span><span></span><span></span></div><img src="../../ui_images/overview_page.png" alt="Overview screen"></div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Why Different">
+  <div class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-tech">Technical Excellence</span></div>
+  <div class="eyebrow">06 &middot; No Vector Database Needed</div>
+  <div class="title-bar"><span class="word">Traced, Not <em>Guessed</em>.</span></div>
+  <p class="lede" style="font-size:0.95rem;margin-bottom:0.6em;margin-top:-0.2em;">SiteMind handles data scale by linking separated engineering layers through structural NetworkX logic instead of unstable semantic vector parsing.</p>
+  <div class="graph-frame"><img src="../../ui_images/KNOWLEDGE_graph.png" alt="Knowledge Graph screen"></div>
+  <div class="chain-box">
+    <span class="chain-label">// LIVE CROSS-LINK</span>
+    <div class="chain">Structural Submittal (SHP-002) &harr; Active Engineering RFI (RFI-EL-112) &harr; Live Schedule Task WBS (DC1-04-EL-030)</div>
+  </div>
+  <div class="graph-callouts">
+    <div class="callout"><strong>Clickable system memory.</strong> Not a chat window that forgets. A permanent graph tracing parameters to physical assets.</div>
+    <div class="callout"><strong>Fully offline profile.</strong> Operates entirely locally inside the data center workspace boundaries.</div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Impact & Scale">
+  <div class="chips"><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-scale">Scalability</span></div>
+  <div class="eyebrow">07 &middot; Transparent Economics, Real Validation</div>
+  <h1>Transparent Economics Derived from Stated Unit Factors</h1>
+  <div class="two-col">
+    <div class="box">
+      <h3>Computed Variables</h3>
+      <div class="stat-row" style="margin:0.6rem 0 0;">
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="num" style="font-size:1.4rem;">~20 hrs</div><div class="lbl" style="font-size:0.7rem;">Saved Per Complex Document Review</div></div>
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="num" style="font-size:1.4rem;">&#8377;15L</div><div class="lbl" style="font-size:0.7rem;">Average Exposure Neutralized Per Field Flaw</div></div>
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="num" style="font-size:1.4rem;">21/21</div><div class="lbl" style="font-size:0.7rem;">Real Eval Scripts Passing, Full Suite</div></div>
+      </div>
+      <div class="footnote" style="margin-top:0.7em;">~20 hrs and &#8377;15L are labeled cost assumptions used to compute exposure, not measured outcomes from a live project.</div>
+    </div>
+    <div class="box">
+      <h3>System Scale</h3>
+      <p>Zero fine-tuning or model training required. Scaling means text-indexing new raw standard PDFs.</p>
+      <div>
+        <span class="corpus-chip">IS 875</span><span class="corpus-chip">IS 13920</span><span class="corpus-chip">NBC 2016</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-stage="Vision">
+  <div class="chips"><span class="rubric-chip tag-innovation">Innovation</span><span class="rubric-chip tag-impact">Business Impact</span><span class="rubric-chip tag-tech">Technical Excellence</span><span class="rubric-chip tag-scale">Scalability</span><span class="rubric-chip tag-ux">UX</span></div>
+  <div class="eyebrow">08 &middot; What's Next</div>
+  <h1>The Verification Layer for Every Data Center Built in India.</h1>
+  <p class="lede">Today: structural and electrical compliance for one project type. Tomorrow: every IS/CEA/NBC clause, every discipline, every EPC contractor, the same deterministic core, just more corpus. No retraining, ever.</p>
+  <div class="footnote">21/21 real eval scripts passing today &nbsp;&middot;&nbsp; Legal codes and evaluation logic: 100% genuine &nbsp;&middot;&nbsp; Project documents: representative, modeled on public tenders &nbsp;&middot;&nbsp; Built for a 90-day live pilot next.</div>
+  <div class="cta">Launch Verification Console: sitemind.awni.in</div>
+</section>
+
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = document.querySelectorAll('.slide');
+  const dotsWrap = document.getElementById('dots');
+  const stageLabel = document.getElementById('stage-label');
+  const counterN = document.getElementById('counter-n');
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    b.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    dotsWrap.appendChild(b);
+  });
+  const dots = dotsWrap.querySelectorAll('button');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        const idx = Array.from(slides).indexOf(e.target);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        stageLabel.textContent = e.target.dataset.stage;
+        counterN.textContent = String(idx + 1).padStart(2, '0');
+      }
+    });
+  }, { threshold: 0.55 });
+  slides.forEach((s) => io.observe(s));
+  document.addEventListener('keydown', (e) => {
+    const active = Array.from(dots).findIndex((d) => d.classList.contains('active'));
+    if (['ArrowDown', 'j', 'PageDown'].includes(e.key) && active < slides.length - 1) {
+      slides[active + 1].scrollIntoView({ behavior: 'smooth' });
+    } else if (['ArrowUp', 'k', 'PageUp'].includes(e.key) && active > 0) {
+      slides[active - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+</script>
+
+</body>
+</html>

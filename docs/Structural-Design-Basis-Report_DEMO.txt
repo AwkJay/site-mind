@@ -1,0 +1,55 @@
+STRUCTURAL DESIGN BASIS REPORT
+Hyperscale Data Centre · Chennai · 48 MW IT Load · Uptime Tier III
+Document No.: DC1-02-DBR-0009 | Rev: R0 | Discipline: Structural / Civil | Status: Issued for Review
+Facility: Colocation data hall + utility yard | Exposure class: Severe (coastal) | Seismic zone: III
+
+Revision register: R0 | Issue A | First issue for internal design review | Prepared A.K. | Checked R.S. | Approved V.N.
+
+1. INTRODUCTION AND SCOPE
+This Structural Design Basis Report (DBR) establishes the loading, materials, durability and analysis criteria that govern the structural and civil design of the hyperscale data centre facility at the Chennai site. The facility comprises a single-storey data hall block housing the white-space and electrical rooms, a two-storey administration and network-operations wing, and an external utility yard carrying medium-voltage transformers, standby generators and the cooling plant. This report is the controlling reference for all subsequent structural calculations, drawings, schedules and submittals; where a later document conflicts with the criteria stated here, this DBR shall govern until formally revised.
+The scope covered by this basis includes the substructure (raft and pile-supported foundations), the reinforced-concrete and structural-steel superstructure, the equipment support structures within the utility yard, and the durability provisions appropriate to the coastal setting.
+
+2. PROJECT DESCRIPTION AND STRUCTURAL CONCEPT
+A hyperscale data centre is, structurally, an industrial building carrying an unusually heavy and highly serviceable equipment load rather than a large human occupancy. The design is driven less by the roof and floor live loads of a conventional building and more by concentrated equipment weights, stringent deflection and vibration limits over the white-space, and the requirement that the facility remain operable and maintainable without interruption. The Uptime Tier III objective of concurrent maintainability is reflected structurally in the segregation of electrical and mechanical support structures so that any single support line can be isolated for maintenance without compromising the load path of the operating equipment.
+The data hall adopts a reinforced-concrete framed structure with a stiff ground-bearing and raft-supported slab system, selected for its mass, its inherent fire performance, and its capacity to control floor vibration under rotating mechanical plant.
+
+3. REFERENCE CODES AND STANDARDS
+The design conforms to the current Indian Standards and to the National Building Code of India. The principal references are: IS 456:2000 (Plain and Reinforced Concrete); IS 1893 (Part 1):2016 (Earthquake Resistant Design); IS 13920:2016 (Ductile Detailing); IS 875 Parts 1 to 5 (Design Loads); IS 1786:2008 (Reinforcement Bars); IS 2062:2011 (Structural Steel); IS 2911 Part 1 (Pile Foundations); IS 800:2007 (Steel); SP 34:1987 (Reinforcement Detailing); and the National Building Code of India 2016.
+
+4. SITE, GEOTECHNICAL AND EXPOSURE CONDITIONS
+The site lies on the Chennai coastal plain, within a chloride-laden marine atmosphere and with a shallow, seasonally variable water table. In accordance with IS 456:2000, the substructure and all reinforced concrete in contact with, or in the splash and spray zone of, ground water is classified under the severe exposure condition, and marine-exposed reinforced sections are treated under the sea-coast provisions of the code. This classification governs the concrete quality, the maximum permissible free water-to-cement ratio, the minimum cement content and the nominal cover adopted throughout the substructure.
+The geotechnical investigation reports a medium-dense to dense sandy stratum overlying stiff marine clay, with a recommended net safe bearing capacity suitable for a raft solution beneath the data hall and pile support beneath the more heavily loaded utility-yard equipment.
+
+5. DESIGN LOADS
+Self-weight is computed from the nominal section sizes and material densities. Superimposed dead load over the white-space allows for the raised access floor, containment, cable trays and the busway distribution. Imposed loads follow IS 875 (Part 2), with an enhanced white-space uniformly distributed load and a rack point-load case considered concurrently. Wind actions are derived from IS 875 (Part 3) for the Chennai basic wind speed, with the appropriate risk, terrain, topography and importance modifiers applied. Seismic actions follow IS 1893 (Part 1):2016 for Seismic Zone III, using the equivalent static method for the regular blocks and a dynamic response-spectrum analysis for the irregular blocks. Limit-state load combinations for strength and serviceability are taken from IS 456 and IS 1893.
+
+6. FOUNDATION DESIGN BASIS
+The data hall is founded on a stiffened raft proportioned to keep total and differential settlement within the limits tolerable by the raised-floor and equipment installation. The utility-yard transformers and generators are carried on pile caps over bored cast-in-situ piles designed to IS 2911. Foundation concrete is designed for the severe coastal exposure, and the crack-width and cover provisions of IS 456 are applied to control chloride ingress over the design life.
+The following as-submitted foundation values are placed on record for compliance review against IS 456:2000, stated exactly as detailed on the current foundation drawings.
+The raft footing F-12 in the transformer yard is detailed with a nominal cover of 30 mm under severe coastal exposure. For the same severe-exposure raft, the concrete mix adopts a free water-cement ratio of 0.50. Grade M25 RCC is specified for the coastal transformer-yard pile caps.
+Bearing pressures under the raft are kept within the recommended net safe bearing capacity, and the pile group is proportioned for the combined vertical, lateral and moment demands from the equipment and the seismic case.
+
+7. SUPERSTRUCTURE DESIGN BASIS
+The data-hall superstructure is a reinforced-concrete moment frame with wide, shallow beams supporting a stiff floor system tuned to limit vibration under the mechanical plant. The administration wing uses structural steelwork to IS 2062 and IS 800 for the longer office spans.
+The superstructure slabs and beams use Grade M35 concrete. Column C-08 longitudinal reinforcement is provided at 1.8 percent of the gross section, within the code-permitted range for primary columns.
+Reinforcement percentages elsewhere in the frame are held between the code minimum and maximum for compression members, with lap and anchorage lengths detailed to SP 34.
+
+8. EQUIPMENT SUPPORT STRUCTURES
+Transformer plinths, generator bases and the cooling-plant supports are designed as reinforced-concrete or steel structures isolated, where required, for vibration. The standby generators are mounted on inertia bases proportioned to control dynamic transmission into the surrounding structure.
+
+9. SEISMIC DESIGN BASIS
+The lateral system comprises ductile moment-resisting reinforced-concrete frames in the data hall and braced or moment steel frames in the administration wing. The design follows the equivalent-static and response-spectrum provisions of IS 1893 (Part 1):2016 for Seismic Zone III, with ductile detailing to IS 13920 governing the reinforcement of the frames, the joints and the shear walls.
+The structure is designed to IS 1893 (Part 1):2016 for Seismic Zone III. A seismic importance factor of I = 1.0 has been adopted for the facility.
+Reviewer note: a hyperscale data centre carries mission-critical and lifeline-type functions. The seismic category under IS 1893 (Part 1), Table 8, and the corresponding factor applied to the facility should be confirmed against the project brief and the client's resilience requirements before the design is frozen.
+
+10. DURABILITY AND CONCRETE TECHNOLOGY
+Durability of the marine-exposed substructure is the controlling design consideration and follows the severe-exposure and sea-coast provisions of IS 456:2000 (Clauses 8.2.4 and 8.2.8, and Table 5). The governing levers are a low free water-to-cement ratio, an adequate minimum cement content, controlled crack width, and generous nominal cover to reinforcement. For reinforced concrete exposed directly along the sea-coast, IS 456 Clause 8.2.8 sets the durability floor at a characteristic strength of thirty megapascals; the minimum nominal cover to main reinforcement for the severe exposure class is fifty millimetres per Clause 26.4.2.2. Blended cements incorporating slag or a suitable pozzolana are preferred for their resistance to chloride ingress.
+
+11. MATERIALS
+Reinforcement steel is TMT Fe-550D conforming to IS 1786. Structural steel for secondary framing conforms to IS 2062 E250. A 20 mm nominal maximum aggregate is adopted for the general structural concrete. All materials are supported by manufacturer test certificates and by independent testing at the frequency set out in the quality plan.
+
+12. CONSTRUCTION AND QUALITY ASSURANCE
+A project quality plan governs material approval, mix trials, sampling, cube testing, cover measurement and record-keeping. Cover to reinforcement is assured through approved cover blocks and is verified before every concrete pour of a marine-exposed element. Non-conformances are logged, dispositioned and closed out before the affected work is covered up.
+
+13. REFERENCES
+All Indian Standards listed in Section 3, the project geotechnical investigation report, the architectural and MEP coordination drawings, the equipment vendor load schedules, and the structural analysis and design calculations issued under separate cover.
