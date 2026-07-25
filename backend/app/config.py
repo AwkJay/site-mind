@@ -38,12 +38,39 @@ CLAUDE_CODE_OAUTH_TOKEN: str = os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-5.1").strip()
 
+IAMHC_API_KEY: str = os.getenv("IAMHC_API_KEY", "").strip()
+IAMHC_BASE_URL: str = os.getenv("IAMHC_BASE_URL", "https://api.iamhc.cn/v1").strip()
+
 # Gemini API (Google AI Studio) — the HexaFalls default prose provider. Prose
 # only, same as every other provider here: compliance pass/fail stays in
 # checks.py/rule_eval.py regardless of which (or no) provider writes the words.
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-flash-latest").strip()
 GEMINI_VISION_ENABLED: bool = os.getenv("GEMINI_VISION_ENABLED", "0").strip() == "1"
+
+# Multi-account key rotation (app/gemini_key_pool.py) — each Google account's
+# free tier is ~20 requests/day, so a second/third key roughly multiplies the
+# usable daily budget. GEMINI_API_KEYS is built in priority order, skipping
+# unset/empty entries; with only GEMINI_API_KEY set this is a single-element
+# list and every downstream consumer behaves byte-identically to before this
+# existed (bool(GEMINI_API_KEYS) == bool(GEMINI_API_KEY) in that case).
+GEMINI_API_KEY_2: str = os.getenv("GEMINI_API_KEY_2", "").strip()
+GEMINI_API_KEY_3: str = os.getenv("GEMINI_API_KEY_3", "").strip()
+GEMINI_API_KEYS: list[str] = [k for k in (GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3) if k]
+
+
+def _parse_rotate_after(raw: str) -> int:
+    try:
+        value = int(raw)
+        return value if value > 0 else 19
+    except (TypeError, ValueError):
+        return 19  # unset/unparseable -> the documented default
+
+
+# Successful live requests to serve on one key before rotating to the next
+# (the (N+1)th request onward on that key is deliberately left as headroom,
+# never spent). Applies per key, per Pacific day.
+GEMINI_ROTATE_AFTER: int = _parse_rotate_after(os.getenv("GEMINI_ROTATE_AFTER", "19"))
 
 # Hugging Face Inference API — used only by app/embeddings.py for Copilot's
 # semantic retrieval (a free token from https://huggingface.co/settings/tokens).
@@ -67,9 +94,10 @@ LANGFUSE_ENABLED: bool = bool(LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY)
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "").strip().lower()
 if not LLM_PROVIDER:
     # Back-compat: infer from whichever key is present, else stay offline.
-    # Gemini is the preferred inference when multiple keys are present (the
-    # HexaFalls default provider).
-    if GEMINI_API_KEY:
+    # IAMHC is the primary default, Gemini is the fallback.
+    if IAMHC_API_KEY:
+        LLM_PROVIDER = "iamhc"
+    elif GEMINI_API_KEY:
         LLM_PROVIDER = "gemini"
     elif ANTHROPIC_API_KEY:
         LLM_PROVIDER = "anthropic"
@@ -80,6 +108,8 @@ if not LLM_PROVIDER:
 
 
 def _provider_usable() -> bool:
+    if LLM_PROVIDER == "iamhc":
+        return bool(IAMHC_API_KEY)
     if LLM_PROVIDER == "codex":
         return True  # auth is external (ChatGPT login); runtime calls fall back if not ready
     if LLM_PROVIDER == "openai":
@@ -87,7 +117,11 @@ def _provider_usable() -> bool:
     if LLM_PROVIDER == "anthropic":
         return bool(ANTHROPIC_API_KEY)
     if LLM_PROVIDER == "gemini":
-        return bool(GEMINI_API_KEY)
+        # A pool with >=1 key is usable. Per-key exhaustion is a call-path
+        # concern (app/gemini_key_pool.py), not an OFFLINE_MODE concern — an
+        # all-exhausted pool must NOT flip this flag (that would change
+        # unrelated behaviour); complete_text()'s cache/"" fallback handles it.
+        return bool(GEMINI_API_KEYS)
     return False
 
 
@@ -170,3 +204,12 @@ SOLANA_CLUSTER: str = os.getenv("SOLANA_CLUSTER", "devnet").strip()
 # (plan §D) via langgraph-checkpoint-mongodb; unset MONGODB_URI -> the agent
 # still runs, just without cross-turn memory (each call is stateless).
 COPILOT_AGENT_ENABLED: bool = os.getenv("COPILOT_AGENT_ENABLED", "0").strip() == "1"
+
+# Spatial Compliance (docs/superpowers/specs/2026-07-25-spatial-compliance-design.md)
+# LLM extraction enhancement — OFF by default. Extraction in app/spatial/extract.py
+# is regex-first and works fully offline with zero API keys; when this flag is 0
+# (the default), app/spatial/extract.py imports NO llm module at all, mirroring the
+# import-gating discipline of RETRIEVAL_ENABLED/CODEBOOK_ENABLED above. Regex stays
+# the floor even when this is on (same "can only add coverage" contract as
+# LLM_EXTRACTION_ENABLED).
+SPATIAL_LLM_EXTRACTION_ENABLED: bool = os.getenv("SPATIAL_LLM_EXTRACTION_ENABLED", "0").strip() == "1"
