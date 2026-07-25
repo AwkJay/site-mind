@@ -4,12 +4,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-PY="$(command -v python3.12 || command -v python3.11 || command -v python3)"
+export PATH="$HOME/.local/bin:$PATH"
+
 if [ ! -d ".venv" ]; then
-  "$PY" -m venv .venv
+  ~/.local/bin/python3.12 -m venv .venv
 fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
-pip install -q --disable-pip-version-check -r requirements.txt
+python -m pip install -q --disable-pip-version-check -r requirements.txt
 
-exec python bot.py
+exec .venv/bin/python bot.py
