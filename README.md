@@ -69,9 +69,9 @@ And how a single compliance call is made — a model only ever touches the outer
 
 ```mermaid
 flowchart LR
-    A["1 · Perceive<br/>Claude extracts each value<br/>and its source span, or abstains"]
+    A["1 · Perceive<br/>The LLM (Gemini by default)<br/>extracts each value<br/>and its source span, or abstains"]
     B["2 · Decide<br/>Python checks the value against<br/>the cited clause — the model<br/>never touches this step"]
-    C["3 · Explain<br/>Claude writes the finding<br/>in plain English"]
+    C["3 · Explain<br/>The LLM writes the finding<br/>in plain English"]
     A --> B --> C
 ```
 
@@ -125,12 +125,14 @@ cd frontend && npm run dev                                      # :3000
 
 ### 3 · Add LLM prose (optional)
 
-Claude writes the findings and answers when a key is set; with no key it falls back to
-deterministic templates.
+An LLM writes the findings and answers when a key is set; with no key everything falls back to
+deterministic templates. **Gemini is the default provider** — if `GEMINI_API_KEY` is set and
+`LLM_PROVIDER` is left unset, it's picked up automatically. Anthropic, OpenAI, and Codex (local
+`codex login`, no key needed) also work — see `backend/.env.example` for the full list.
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
-ANTHROPIC_MODEL_SMART=claude-sonnet-4-6
+GEMINI_API_KEY=your-key-from-aistudio.google.com
+GEMINI_MODEL=gemini-flash-latest
 ```
 
 Keys only affect prose and semantic search — **never a verdict**.
@@ -150,10 +152,31 @@ claude setup-token                                                # paste result
 
 With the flag unset, extraction is the deterministic regex path — the default, and what the demo records.
 
+### 4 · Add the conversational Copilot agent + Telegram field bot (optional)
+
+`COPILOT_AGENT_ENABLED=1` turns the single-shot Copilot into a multi-turn LangGraph agent
+(`POST /api/copilot/chat`) with read-only tools across NCRs, schedule risk, supply chain, and both
+retrieval corpora, plus per-thread conversation memory. Needs `RETRIEVAL_ENABLED=1` and a
+`GEMINI_API_KEY` (falls back to the single-shot answerer on any error, including a quota 429).
+
+```bash
+cd backend && COPILOT_AGENT_ENABLED=1 RETRIEVAL_ENABLED=1 ./run.sh   # GEMINI_API_KEY in .env
+```
+
+The Telegram field bot (`telegram-bot/`) is a thin client of that same endpoint — send it a voice
+note or text in Hindi/English/a regional language, it replies with cited text + voice
+(ElevenLabs STT/TTS, Gemini translation), and caches repeat questions so they don't re-spend quota.
+
+```bash
+cd telegram-bot && cp .env.example .env   # fill in TELEGRAM_BOT_TOKEN, ELEVENLABS_API_KEY, GEMINI_API_KEY
+./run.sh
+```
+
 ## Features
 
 - **Compliance Agent** (`/compliance`) — upload a DBR/submittal, get NCRs with a cited clause, the
-  exact source span, and a confidence-scored action brief.
+  exact source span, and a confidence-scored action brief. Click any citation to open an in-app
+  clause viewer — the real source document's own text, read straight off disk, not an external link.
 - **Project Copilot** (`/copilot`) — cross-document Q&A with citations; guardrailed hybrid
   retrieval (BM25 + dense, reciprocal-rank fused); abstains below a floor instead of guessing.
 - **Schedule Risk** (`/schedule`) — CPM + leading-indicator rules (procurement, weather,
@@ -188,8 +211,8 @@ without it. See `hexafalls_plan.md` §9 for the full env var table.
   agent-orchestration framework runs — it never decides a verdict, only routes and phrases answers.
 - **Telegram field bot (`telegram-bot/`)** — a standalone multilingual voice bot: send a voice note
   in Hindi/English/regional language, get a cited answer back as voice + text (ElevenLabs
-  STT+TTS, Gemini translation, calling the same `/api/copilot/ask`). Run with `cd telegram-bot &&
-  ./run.sh` after filling in `.env` from `.env.example`.
+  STT+TTS, Gemini translation, calling the full Copilot agent's `/api/copilot/chat`, with
+  per-chat memory and a reply cache for repeat questions). See "Running it" §4 above.
 
 ## Evals
 
@@ -202,10 +225,11 @@ cd backend && source .venv/bin/activate && python -m eval.run_eval
 
 ## Known caveats (disclosed, not hidden)
 
-- Some clause verify-links point at a dev host; the clause *text* still resolves in-app.
 - Semantic search needs a free `HF_TOKEN`; Compliance and Commissioning need no keys at all.
 - ROI figures (~20 engineer-hrs and ~₹15L per issue) are labelled assumptions, not measurements.
-- All project data is synthetic/representative, modelled on public tenders.
+- All project data is synthetic/representative, modelled on public tenders — see `docs/know.md`
+  for the full real-vs-synthetic breakdown and judge Q&A prep.
+- The full list of what's still imperfect, kept honest on purpose, is `docs/gaps.md`.
 
 ## Roadmap
 
