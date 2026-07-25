@@ -1,0 +1,286 @@
+# SiteMind → HexaFalls — Consolidated Planning Context
+
+> Distilled from two full planning sessions (terminal clutter, tool logs, and verbose
+> plan reproductions removed). The canonical build spec lives in `hexafalls_plan.md`.
+> This file preserves the *reasoning and decisions* behind that plan so any future
+> session has the "why", not just the "what".
+
+---
+
+## 0. Who / what / goal
+
+- **Project:** SiteMind — an AI intelligence + compliance platform originally built for the
+  ET AI Hackathon 2026 (Problem #4, data-centre EPC delivery). That hackathon is over.
+- **Now:** entering **HexaFalls** — an open-innovation MLH hackathon, no fixed track.
+- **Goal:** win. Repositioned as the intelligence + **tamper-proof accountability** layer
+  for any hyperscale / public-infra megaproject (data centres, semiconductor fabs, and by
+  extension government infrastructure spending where opacity enables fraud).
+- **User's role request:** act as an honest, intellectual, hackathon-winning SWE sparring
+  partner — push back on bad instincts, don't just agree. Explain simply (user gets a
+  headache from jargon/over-long text; prefers points + plain English + a genuine opinion).
+- **Stack today:** FastAPI + Next.js 14/TS/Tailwind/Recharts; scikit-learn +
+  sentence-transformers retrieval; NetworkX graph; Codebook standards service (MCP);
+  optional LLM (prose only). No DB (flat-file / in-memory). No agent framework.
+
+---
+
+## 1. The core credibility thesis (the moat — do not weaken)
+
+- **The LLM never *computes a verdict*.** Pass/fail is deterministic Python against a
+  **real, cited primary-source code clause** (`checks.py` + `clauses.json`).
+- **Never invent a clause.** Every citation resolves to real digitised IS / BIS / CEA text.
+- **No asserted numbers.** Every metric comes from a real eval run (`backend/eval/`).
+- **OFFLINE_MODE boots with zero keys.** Every new integration is additive and degrades to
+  a clean no-op. The keyless demo path must never break.
+- **Evals stay byte-identical.** New backends are opt-in via env flags; default = safe/offline.
+
+**The plain-English version of the thesis (how one check runs):**
+1. **READ** (AI) — reads the messy PDF, pulls the value (e.g. "40mm cover"), points to the
+   exact sentence. Value kept only if its quote is a verbatim substring of the source, else dropped.
+2. **JUDGE** (plain code) — runs one comparison: `40 < 50` → FAIL. No AI. Just math.
+3. **WRITE** (AI) — writes the human explanation prose.
+So "the LLM never decides" = the LLM never does step 2. It's a calculator, not a brain.
+`40 < 50` is the same answer forever and points to the exact clause → auditable. An AI verdict
+= "flagged because vibes" → a regulator can't certify that.
+
+Today the AI touches only **2 of the 10 sidebar pages** (Compliance = read docs + write findings;
+Copilot = write answers). Everything else is pure code/math. Knowledge Base / Codebook use
+embedding "smart search", not a generative LLM.
+
+---
+
+## 2. Session 1 — the sponsor-track pivot (decisions + rationale)
+
+Three Explore agents mapped the codebase. Key finding: **every integration slots into a clean
+existing seam — no rewrite needed.** (`llm.py` is already a provider switch; the compliance
+ingest handler already 422s on scanned PDFs = the perfect Vision hook; there's no DB today so a
+Mongo audit ledger is a genuinely new capability, not decoration.)
+
+**Decisions locked (with the honest justification for each):**
+
+| Track / tech | Decision | Why it's honest, not decoration |
+|---|---|---|
+| **Actian VectorAI DB** ($1,000, TOP priority) | Add a `numpy \| actian` **vector-store provider switch** behind the one `Corpus` seam. numpy stays default for evals/offline; actian serves the live app + demo. Proven by a dedicated **parity eval** (asserts top-hit doc-id parity, not float equality). | Production vector DB that runs **fully offline / air-gapped** — matches a real megaproject/govt site where data can't leave the premises. A genuine upgrade over sklearn cosine-in-memory. |
+| **Gemini API** | Replace Claude as the default **prose** LLM (`llm.py`, ~30 lines) **+ Gemini Vision** to read scanned drawings/photos. | Vision unlocks a real capability: `compliance.py` today throws 422 "scanned/image-only PDFs not supported" — that dead-end becomes "Gemini reads the photo", and `verify_spans` still gates hallucination (quote must be a substring of Gemini's own transcription; tagged `source_type=primary_scan_ocr`). |
+| **MongoDB Atlas** | Append-only **audit ledger** only (NCR + cited clause + span + provenance + SHA-256 content_hash + timestamp). NOT a migration of the deterministic source loaders. Unique index on content_hash → idempotent. No-Mongo → local JSONL fallback. | Today NCRs/alerts are recomputed fresh from flat files every request — nothing remembers when a finding first appeared. This is the memory the app never had; the substrate Solana anchors. |
+| **Solana** | **devnet SPL-Memo hash-notarization** (no Rust/Anchor program). Anchor content_hash on-chain on demand (button), store tx_sig back on the Mongo event. Verify recomputes hash + checks chain. | Makes "anti-corruption" **demoable** (tamper the DB copy → "Verify" goes RED) instead of a slogan. Low complexity, graceful degradation. |
+| **ElevenLabs + Telegram** | Standalone bot service (long-polling). ElevenLabs does STT (Scribe) + TTS; Gemini does Hindi↔English translation; calls existing `/api/copilot/ask`; respects its abstention floor. | Real field UX — a site engineer asks by voice note in Hindi/regional language, hears a cited answer back. Does not touch the deterministic core. |
+| **DigitalOcean** | **Deferred** to a standalone `digitalocean.md` deploy guide (the $200 credit is uncertain). | Build if credits arrive; don't block on it. |
+
+**Positioning one-liner:** *"Every compliance decision on a megaproject — cited to the actual
+law, decided by auditable code not a black-box model, and notarized on a public blockchain so
+it can never be quietly altered. Runs fully offline, on-site."*
+Demo arc: **Perceive** (Gemini vision) → **Retrieve** (Actian, offline) → **Decide** (Python) →
+**Remember** (Mongo ledger) → **Prove** (Solana) → **Reach the field** (Telegram voice bot).
+
+**Honesty guardrails (do not violate):**
+- Say **"tamper-evident / independently verifiable"**, never "impossible to corrupt / eliminates
+  corruption." The mechanism proves a record wasn't *silently altered*; it doesn't police intent.
+- All project data stays **synthetic/representative** (modelled on public tenders). The standards,
+  checking logic, and crypto/audit mechanisms are real. Disclose this.
+
+**Key constraint flagged:** Actian Community Edition caps at **5,000 vectors**; the structural
+corpus is **6,206 chunks** → use the Starter 30-day trial (1M vectors) for the demo, or index a
+≤5K subset and state the tier limit. Never claim more than what actually loaded.
+
+---
+
+## 3. Session 2 — the BIG evolution: tiered compliance verdicts
+
+The user pushed back hard and correctly on a scaling weakness:
+
+> *"There are **thousands** of clauses, tables, formulae in IS standards. We can't hand-write
+> Python (`if/else`) for every one. Use hybrid RAG, cite the source, show the model's **draft
+> verdict** + **how it decided**, make it easy for an engineer to verify against the source, then
+> the engineer makes the final call — double-checking."*
+
+This resolved the tension between **"scaling needs LLM reasoning"** and **"auditability needs
+determinism"** via **structured-rule extraction + a generic evaluator**.
+
+### The three verdict tiers (all cite a real clause) — new `NCR.verdict_tier` field
+
+| Tier | When | Verdict computed by | UI badge |
+|---|---|---|---|
+| 🟢 `certified` | Param matches one of the ~17 hand-vetted rules in `checks.py` | hand-vetted Python (unchanged) | "Certified · pre-vetted" (green) |
+| 🟡 `computed_draft` | No `checks.py` rule → retrieve clause → **LLM extracts a structured rule** → **generic Python evaluator computes** | Python evaluator; LLM only *read* the rule | "DRAFT · confirm reading" (amber) |
+| ⚪ `unresolved` | Retrieval abstains, or the rule phrase fails the substring gate | none — honestly flagged | "No governing clause found" (slate) |
+
+### How the "math" is actually checked (critical — NO code generation, NO math-subagent)
+
+1. The LLM reads the **retrieved, real** clause and outputs a **structured rule as JSON**
+   (`ExtractedRule`: `kind` = compare / range / min_of / max_of / table_lookup / formula / none;
+   operator, threshold, unit, inputs, table, expression, `clause_phrase`, `clause_key`). It is
+   *describing* the rule, **not calculating**.
+2. A pre-written generic evaluator `rule_eval.py` does the arithmetic — same reviewed code every
+   time. **No subagent writes code. No `eval()`/`exec`.**
+3. For formulae: a **safe AST evaluator** with a strict whitelist (numbers, named inputs,
+   `+ - * / ** ( )`, `min`/`max` only). Rejects anything else. Never raises.
+4. The UI shows **value + rule + math + cited clause side-by-side** as a **DRAFT** a licensed
+   engineer confirms (`status="REVIEW_REQUIRED"`).
+
+### Two anti-hallucination gates (non-negotiable)
+1. The extracted **value** already passes `verify_spans` (verbatim quote from the uploaded doc).
+2. The extracted rule's **`clause_phrase` must be a verbatim substring of the retrieved clause
+   `raw_text`** (reuse `llm_extract._norm` substring logic). Fail → `unresolved`. Never fabricate.
+
+### The key mental model
+*"Reasoning text ≠ proof; the cited clause is the proof."* Two halves: **Interpretation**
+(LLM, fallible, verified against source in ~5s by the engineer) vs **Computation** (deterministic
+code, always correct). The thesis shifts from *"the LLM never decides"* to
+**"the LLM never *computes a verdict*"** — it reads, code computes, engineer confirms.
+
+**The seam this attaches to:** `compliance.py:282-283` `if not applied: continue` — today an
+unmatched param is silently dropped (a blind spot). The new tier fills it, **behind a
+default-off flag** (`COMPLIANCE_RULE_EXTRACTION`), so evals stay byte-identical. **If the clock
+runs out:** ship the seam + two-half UI with a hand-written `ExtractedRule` fixture for the demo
+clause; LLM extraction is the scale *proof*, not the foundation.
+
+---
+
+## 4. Session 2 — the framework question (Copilot edge)
+
+The user asked how "just Gemini" handles tool-calling / memory / scale in production, since judges
+probe this. Two weapons were developed:
+
+**The reframe (offensive, not defensive):** frameworks like LangGraph/ADK put the *LLM in charge
+of control flow* — the model picks the next step at runtime. Compliance can't have an unauditable
+decision path (a regulator can't certify it). So we inverted it: **the model perceives and
+explains; orchestration is deterministic Python you can read, test, diff, version.**
+
+**What the LLM MAY decide** (perception / navigation / expression): what to extract, which
+tool/corpus to search, how to phrase, whether it's confident enough to answer.
+**What the LLM MUST NOT decide** (adjudication): the pass/fail verdict, which clause governs, the
+threshold comparison, whether something is compliant.
+
+**"Memory" = 4 purpose-built layers, not one framework wrapper:** Actian (semantic recall) ·
+MongoDB (conversation history + facts) · Solana (tamper-proof provenance) · Gemini's native
+multi-turn API (short-term conversation). Chat without a framework = Gemini is natively multi-turn,
+you just persist the message list in Mongo (that IS what LangChain "memory" does internally).
+Agents without a framework = Gemini function-calling for tool routing + MCP (Codebook already
+speaks it). Scale = stateless FastAPI workers, state in Atlas/Actian/Solana, no orchestration
+bottleneck by design. Be nuanced, not dogmatic: *"ADK would be fine for the chat layer; never the
+decision layer."*
+
+**Resolution after back-and-forth (user was explicit: NOT chasing the Google/ADK prize — "use
+whatever is better for future scaling like LangChain or LangGraph"):**
+- **NO framework in the verdict core** — `checks.py`, `rule_eval.py`, the compliance pipeline stay
+  pure, auditable Python.
+- **LangGraph allowed ONLY on the Copilot conversational edge** (chat page + Telegram bot). It
+  routes questions, calls **read-only** tools wrapping existing pillar endpoints, phrases cited
+  answers — **never** makes a pass/fail decision. Chosen over LangChain legacy agents because it's
+  an explicit graph/state-machine (control flow stays inspectable, fits auditability) + ships
+  durable checkpointers for memory. Confirm the current LangGraph API at build time.
+- **Memory:** a LangGraph **Mongo checkpointer** keyed by `thread_id` — replaces any hand-rolled
+  history collection.
+- Gated on `COPILOT_AGENT_ENABLED` (default 0) + present `GEMINI_API_KEY`; lazy import; **keyless
+  boot falls back to the existing cited-RAG `copilot.answer()`** so the app always boots offline.
+
+**Two agreed Copilot/bot upgrades (from the "will the bot know the project?" discussion):**
+1. **Chat memory (Mongo)** — so the bot remembers the conversation ("what about the transformer?"
+   resolves the reference). Small, definitely do it.
+2. **Project-brain bot** — reaches ALL pillars (compliance/schedule/supply-chain), not just docs,
+   via safe tool-routing (picking *where to look* is allowed; only judging is forbidden). Turns a
+   Telegram search box into "ask my project anything, by voice, in Hindi, from the field."
+
+---
+
+## 5. Final plan state (`hexafalls_plan.md` — the canonical doc)
+
+The plan was written to be executed **literally by a cheaper/lower-intelligence Sonnet-tier
+session**: exact `file:line` anchors, literal steps, TODO discipline, tool/skill/subagent usage,
+verification per step. Both the sponsor tracks and the tiered-verdict evolution were **merged**
+into it (contradictions reconciled, not appended).
+
+**Workstreams:**
+| # | Name | Track |
+|---|---|---|
+| A | Gemini as default prose LLM | Gemini |
+| B | Gemini Vision (read scanned drawings/photos) | Gemini |
+| **B2** | **Tiered verdicts** — read-the-rule / code-computes / engineer-confirms ⭐ | Gemini + Tech Excellence |
+| **C** | **Actian VectorAI DB** — offline vector store (numpy\|actian switch + parity eval) ⭐ | Actian ($1k) |
+| D | MongoDB Atlas — append-only audit ledger (+ Audit Ledger UI page) | MongoDB |
+| E | Solana — devnet hash-notarization (+ per-row anchor/verify buttons) | Solana |
+| F | ElevenLabs + Telegram — multilingual voice field bot | ElevenLabs |
+| F2 | Copilot LangGraph edge — tool-routing + Mongo memory | scaling |
+| G | DigitalOcean — deploy guide only (`digitalocean.md`), deferred | DigitalOcean |
+| H | Narrative & docs (README repositioning, pitch/demo-story) | — |
+
+**Build order (each keeps offline + evals intact, each demoable alone):** 0. git init fresh +
+write plan + .env scaffolding → A → B → C → D → E → F → G (doc) → H.
+**Prize-weighted "if time runs out" cut list:** C (Actian $1k) → A+B (Gemini) → B2 → D+E
+(Mongo+Solana transparency combo) → F (ElevenLabs). G and the copilot.py Actian stretch cut first.
+(B2 + C are the two strongest, most-defensible wins.)
+
+**New env flags (all default to the safe/offline path):** `LLM_PROVIDER` (→gemini when key present),
+`GEMINI_API_KEY`, `GEMINI_MODEL` (gemini-2.5-flash, confirm id), `GEMINI_VISION_ENABLED=0`,
+`COMPLIANCE_RULE_EXTRACTION=0`, `COPILOT_AGENT_ENABLED=0`, `RETRIEVAL_VECTOR_STORE=numpy|actian`,
+`ACTIAN_URL=localhost:6574`, `MONGODB_URI` (empty→JSONL), `MONGODB_DB=sitemind`, `SOLANA_ENABLED=0`,
+`SOLANA_RPC_URL`, `SOLANA_SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `ELEVENLABS_API_KEY`,
+`ELEVENLABS_VOICE_ID`, `BACKEND_URL`.
+
+**New files:** `hexafalls_plan.md`, `backend/app/gemini_vision.py`,
+`backend/app/agents/rule_eval.py` + `backend/tests/test_rule_eval.py`,
+`backend/app/retrieval/vector_store.py` (+ standards-service copy), `backend/app/audit.py` +
+`audit_api.py`, `backend/app/notary.py` + `backend/scripts/solana_setup.py`,
+`backend/app/agents/copilot_agent.py`, `backend/eval/run_actian_parity_eval.py`,
+`frontend/app/audit/page.tsx`, `telegram-bot/`, `docker-compose.actian.yml`, `digitalocean.md`,
+`docs/HEXAFALLS_PITCH.md`.
+
+**Keys the user must obtain:** `GEMINI_API_KEY` (Google AI Studio) · Actian (Docker, free
+Community or 30-day Starter) · `MONGODB_URI` (free M0) · Solana devnet keypair (local, no account,
+airdrop test SOL) · `ELEVENLABS_API_KEY` + voice id · `TELEGRAM_BOT_TOKEN`. **No secrets in git.**
+
+---
+
+## 6. Verified backend facts embedded in the plan (starting anchors — always re-Read before editing)
+
+- `checks.py`: `Check` TypedDict ≈22-38; `CHECKS` list ≈50-297 (~17 checks: 10 structural +
+  7 electrical; `rule` returns True=CONFORMS); `applicable_checks(param)` ≈300-302.
+  **DO NOT modify `rule`/`applies_when`/`clause_key`.** These lambdas' shapes (compare/range/
+  min_of/table_lookup/formula) are the reference for the generic evaluator.
+- `compliance.py`: `evaluate_with_params` ≈236-342; the seam `if not applied: continue` ≈282-283;
+  `_violation_ncr` ≈161-174; `_prose` ≈99-106; ingest handler ≈353-393 (422 dead-end for scans).
+- `llm_extract.py`: `verify_spans` ≈116-177 (verbatim substring gate ≈150-151; `CHECKABLE_TYPES`
+  ≈39-49); `extract_params` ≈290-312.
+- `schemas.py`: `Citation` ≈7-29 (`source_type` Literal); `NCR` ≈38-52; `ComplianceResult` ≈73-79.
+  Reusable precedent: `ActionBrief.status="REVIEW_REQUIRED"`, `CommissioningFinding.verdict=
+  "NOT_CHECKABLE"`.
+- `standards.py`: `get_clause` ≈41-52; `all_clauses` ≈55-57. `clauses.json` = **24 records today**
+  (the "6,206" is Actian's target corpus, not yet loaded).
+- `retrieval/index.py`: `RETRIEVAL_FLOOR=0.30`; `Corpus.query` ≈115-139 (returns chunk dicts +
+  score; `raw_text` on chunk but omitted from HTTP API → call `Corpus.query` **in-process**).
+  copilot.py has a separate inline dense store + `_RETRIEVAL_FLOOR=0.40` (left on numpy — out of
+  scope for the Actian swap; note it exists).
+- Frontend: `NCRCard.tsx` header chip row ≈24-31 (add tier chip here); `CitedClauseBox.tsx` ≈10
+  (provenance badge — reuse); `format.ts` `severityMeta`/`sourceTypeMeta`/`domainMeta` (add
+  `tierMeta`); `types.ts` (add `verdict_tier`, `extracted_rule`, `ExtractedRule`, `REVIEW_REQUIRED`);
+  `Shell.tsx` NAV ≈50-61; every GET needs a bundled mock in `mocks.ts`, real POSTs throw a typed
+  `*UnavailableError`.
+
+---
+
+## 7. Status as of last session
+
+- **Zero code written.** Everything above is planned/documented only. `hexafalls_plan.md` is the
+  single canonical build spec; a standalone copy exists at
+  `~/.claude/plans/wise-booping-hickey.md` (consistent).
+- The user understands the plan (walked through it "ADHD-simple" several times).
+- **Next step is the user's call:** start building (recommend B2 or Actian first), or first do a
+  realistic time-ordering of the workstreams so the build session knows what to cut.
+
+### Global pre-demo verification (the universal test)
+- **Keyless boot:** unset all new keys → backend + frontend start, compliance + commissioning
+  work, `/api/health` shows offline, no crashes. If yes, you're safe.
+- `python -m eval.run_eval` + every `run_*_eval.py` produce **unchanged** reports (numpy path).
+- `run_actian_parity_eval.py` passes against a live Actian instance.
+- Solana: anchor → tx on devnet Explorer; verify green; tamper → verify red.
+- Telegram: Hindi voice note → cited Hindi voice + text; out-of-scope → graceful abstain.
+
+### Known landmines to fix/caveat before any demo
+- ~13 of 24 clause `verify_url`s point at `gaudi.local` (dev host) — don't claim "every citation
+  is independently clickable" until fixed.
+- ROI figures (~20 engineer-hrs, ~₹15L/issue) are **labeled estimates**, not measurements.
+- All project data is synthetic/representative — disclose it.
+- Confirm at build time: exact Gemini model id, and the Actian pip package name
+  (`actian-vectorai` vs `actian-vectorai-client`) — docs were slightly inconsistent.
+- Actian needs Docker running on the demo machine (it's a container, not a cloud signup).

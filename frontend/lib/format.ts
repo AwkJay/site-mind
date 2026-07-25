@@ -1,0 +1,259 @@
+import type { AlertSeverity, CommissioningVerdict, EquipmentSpecCheck, ImpactPillar, MitigationAgent, Severity, SourceType, TimelinePillar, TimelineSeverity, VerdictTier } from "./types";
+
+export function inrCompact(n: number): string {
+  // Indian Crore/Lakh compaction for ₹ figures
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(n % 1e7 === 0 ? 0 : 2)} Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(1)} L`;
+  return `₹${n.toLocaleString("en-IN")}`;
+}
+
+export const severityMeta: Record<
+  Severity,
+  { label: string; color: string; bg: string; border: string; icon: string }
+> = {
+  HIGH: {
+    label: "HIGH",
+    color: "var(--critical)",
+    bg: "var(--critical-bg)",
+    border: "var(--critical)",
+    icon: "▲",
+  },
+  MEDIUM: {
+    label: "MEDIUM",
+    color: "var(--warning)",
+    bg: "var(--warning-bg)",
+    border: "var(--warning)",
+    icon: "◆",
+  },
+  LOW: {
+    label: "LOW",
+    color: "var(--text-mid)",
+    bg: "rgba(159,176,191,0.12)",
+    border: "var(--text-lo)",
+    icon: "•",
+  },
+  ADVISORY: {
+    label: "ADVISORY",
+    color: "var(--warning)",
+    bg: "var(--info-bg)",
+    border: "var(--info)",
+    icon: "◐",
+  },
+};
+
+// Honest provenance disclosure for CitedClauseBox — see backend Citation.source_type.
+// codebook_verified (displayed as "Codebook") is the gold standard; the other three
+// are real primary-source extractions with a stated reliability caveat, never presented as equivalent.
+export const sourceTypeMeta: Record<
+  SourceType,
+  { label: string; caveat: string; color: string; bg: string }
+> = {
+  codebook_verified: {
+    label: "Verified · Codebook",
+    caveat: "Fetched verbatim from Codebook's digitised-standards index.",
+    color: "var(--accent)",
+    bg: "rgba(190,242,100,0.12)",
+  },
+  primary_native_pdf: {
+    label: "Primary · native PDF",
+    caveat:
+      "Real primary BIS/CEA document, clean native (non-scanned) PDF — no OCR risk, but not fetched via Codebook.",
+    color: "var(--data)",
+    bg: "rgba(56,189,248,0.12)",
+  },
+  primary_scan_ocr: {
+    label: "Primary · OCR scan",
+    caveat:
+      "Real primary BIS document extracted via OCR from an older scanned edition — verify edition currency.",
+    color: "var(--warning)",
+    bg: "var(--warning-bg)",
+  },
+  cross_source_unverified: {
+    label: "Cross-source · unverified",
+    caveat:
+      "Compiled from convergent secondary sources because the primary standard is paywalled — not fetched from one verified primary document.",
+    color: "var(--critical)",
+    bg: "var(--critical-bg)",
+  },
+};
+
+// verdict_tier badge (plan §B2): "certified" (unchanged, default) is a
+// hand-vetted checks.py rule; "computed_draft" means an LLM read a rule out of
+// a retrieved clause and rule_eval.py computed it — an engineer must confirm
+// the reading before treating it as a confirmed non-conformance;
+// "unresolved" is honestly flagged (no rule could be established), never a
+// fabricated verdict.
+export const tierMeta: Record<VerdictTier, { label: string; color: string; bg: string }> = {
+  certified: { label: "Certified · pre-vetted", color: "var(--pass)", bg: "var(--pass-bg)" },
+  computed_draft: { label: "DRAFT · confirm reading", color: "var(--warning)", bg: "var(--warning-bg)" },
+  unresolved: { label: "No governing clause found", color: "var(--text-lo)", bg: "rgba(159,176,191,0.10)" },
+};
+
+export const domainMeta: Record<string, { label: string; color: string; bg: string }> = {
+  structural: { label: "Structural", color: "var(--text-mid)", bg: "rgba(159,176,191,0.12)" },
+  electrical: { label: "Electrical", color: "var(--data)", bg: "rgba(56,189,248,0.12)" },
+  mechanical: { label: "Mechanical", color: "var(--pass)", bg: "var(--pass-bg)" },
+};
+
+export const commissioningVerdictMeta: Record<
+  CommissioningVerdict,
+  { label: string; color: string; bg: string }
+> = {
+  PASS: { label: "PASS", color: "var(--pass)", bg: "var(--pass-bg)" },
+  OUT_OF_RECOMMENDED_BUT_WITHIN_ALLOWABLE: {
+    label: "WITHIN ALLOWABLE",
+    color: "var(--warning)",
+    bg: "var(--warning-bg)",
+  },
+  FAIL: { label: "FAIL", color: "var(--critical)", bg: "var(--critical-bg)" },
+  NOT_CHECKABLE: { label: "NOT CHECKABLE", color: "var(--text-lo)", bg: "rgba(159,176,191,0.10)" },
+};
+
+export const equipmentSpecMeta: Record<
+  EquipmentSpecCheck["status"],
+  { label: string; color: string; bg: string }
+> = {
+  MATCH: { label: "spec match", color: "var(--pass)", bg: "var(--pass-bg)" },
+  MISMATCH: { label: "spec mismatch", color: "var(--critical)", bg: "var(--critical-bg)" },
+  SPEC_NOT_PROVIDED: { label: "spec not provided", color: "var(--warning)", bg: "var(--warning-bg)" },
+  NOT_APPLICABLE: { label: "no standard yet", color: "var(--text-lo)", bg: "rgba(159,176,191,0.10)" },
+};
+
+export const alertSeverityMeta: Record<AlertSeverity, { label: string; color: string; bg: string }> = {
+  CRITICAL: { label: "CRITICAL", color: "var(--critical)", bg: "var(--critical-bg)" },
+  WARNING: { label: "WARNING", color: "var(--warning)", bg: "var(--warning-bg)" },
+  INFO: { label: "INFO", color: "var(--data)", bg: "rgba(56,189,248,0.12)" },
+};
+
+export const mitigationAgentMeta: Record<MitigationAgent, { label: string; icon: string }> = {
+  procurement_alternative: { label: "Procurement alternative", icon: "■" },
+  resequencing_float: { label: "Resequencing / float", icon: "▲" },
+  resource_recovery: { label: "Resource / overtime recovery", icon: "●" },
+};
+
+export const impactPillarMeta: Record<ImpactPillar, { label: string; href: string }> = {
+  compliance: { label: "Compliance", href: "/compliance" },
+  schedule: { label: "Schedule", href: "/schedule" },
+  supply_chain: { label: "Supply Chain", href: "/supply-chain" },
+  commissioning: { label: "Commissioning QA", href: "/commissioning" },
+};
+
+export const timelineSeverityMeta: Record<TimelineSeverity, { color: string; bg: string }> = {
+  CRITICAL: { color: "var(--critical)", bg: "var(--critical-bg)" },
+  HIGH: { color: "var(--critical)", bg: "var(--critical-bg)" },
+  MEDIUM: { color: "var(--warning)", bg: "var(--warning-bg)" },
+  LOW: { color: "var(--text-mid)", bg: "rgba(159,176,191,0.12)" },
+  INFO: { color: "var(--data)", bg: "rgba(56,189,248,0.12)" },
+};
+
+export const timelinePillarMeta: Record<TimelinePillar, { label: string; href: string }> = {
+  compliance: { label: "Compliance", href: "/compliance" },
+  copilot: { label: "Copilot / RFIs", href: "/copilot" },
+  schedule: { label: "Schedule", href: "/schedule" },
+  supply_chain: { label: "Supply Chain", href: "/supply-chain" },
+  commissioning: { label: "Commissioning QA", href: "/commissioning" },
+};
+
+export function statusMeta(status: string): { color: string; bg: string } {
+  const s = status.toUpperCase();
+  if (s.startsWith("A") || s.includes("APPROVED") && !s.includes("NOTED"))
+    return { color: "var(--pass)", bg: "var(--pass-bg)" };
+  if (s.startsWith("B") || s.includes("NOTED"))
+    return { color: "var(--warning)", bg: "var(--warning-bg)" };
+  if (s.startsWith("C") || s.includes("REVISE"))
+    return { color: "var(--critical)", bg: "var(--critical-bg)" };
+  return { color: "var(--text-mid)", bg: "rgba(159,176,191,0.10)" };
+}
+
+// ── Knowledge Base retrieval provenance (backend/app/retrieval/models.py'
+// RetrievalCitation.source_type) — deliberately a SEPARATE map from
+// sourceTypeMeta above: this package's tags are never Codebook-verified (i.e.
+// manak_verified) or a pillar's own citation, and must never be presented as
+// equivalent to one. "company_uploaded" is the only tag the live package
+// returns today; "manak_indexed" / "sitemind_indexed" are Phase 3b's
+// read-only cross-corpus tags, handled here in case they exist by the time
+// this ships. Falls back to a plain, clearly-flagged "unrecognized" badge for
+// anything else, rather than crashing on an unknown string.
+export const retrievalSourceTypeMeta: Record<
+  string,
+  { label: string; caveat: string; color: string; bg: string }
+> = {
+  company_uploaded: {
+    label: "Company uploaded",
+    caveat:
+      "Ingested from a document your organisation uploaded — not a verified standard. Trusted only to the extent your team vouches for the source.",
+    color: "var(--data)",
+    bg: "rgba(56,189,248,0.12)",
+  },
+  manak_indexed: {
+    label: "Indexed copy · Codebook",
+    caveat:
+      "A locally-built search index of Codebook's public structural-code text — not a live Codebook citation. See the Compliance/Commissioning pillar pages for the authoritative Codebook-verified citation.",
+    color: "var(--accent)",
+    bg: "rgba(190,242,100,0.12)",
+  },
+  sitemind_indexed: {
+    label: "Indexed copy · SiteMind standards",
+    caveat:
+      "A locally-built search index of SiteMind's own standards corpus — see the relevant pillar page for the authoritative citation and its real source_type.",
+    color: "var(--warning)",
+    bg: "var(--warning-bg)",
+  },
+};
+
+export function retrievalSourceTypeMetaFor(tag: string): {
+  label: string;
+  caveat: string;
+  color: string;
+  bg: string;
+} {
+  return (
+    retrievalSourceTypeMeta[tag] ?? {
+      label: tag || "Unrecognized source",
+      caveat:
+        "Unrecognized provenance tag from the retrieval API — shown as-is rather than hidden or guessed at.",
+      color: "var(--text-lo)",
+      bg: "rgba(159,176,191,0.12)",
+    }
+  );
+}
+
+// ── Codebook Console provenance badges (docs/codebook_console.md's
+// "Provenance badge mapping" table, verbatim) — driven by the real
+// provenance_tag value returned by GET /api/codebook/console/corpora and
+// .../documents, never guessed or hardcoded per corpus name.
+export const codebookConsoleProvenanceMeta: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  codebook_verified: {
+    label: "Internal verified standard",
+    color: "var(--pass)",
+    bg: "var(--pass-bg)",
+  },
+  sitemind_indexed: {
+    label: "Internal verified standard",
+    color: "var(--pass)",
+    bg: "var(--pass-bg)",
+  },
+  company_uploaded: {
+    label: "External / uploaded",
+    color: "var(--warning)",
+    bg: "var(--warning-bg)",
+  },
+};
+
+export function codebookConsoleProvenanceMetaFor(
+  tag: string | null | undefined,
+): { label: string; color: string; bg: string } {
+  if (!tag) {
+    return { label: "Unknown provenance", color: "var(--text-lo)", bg: "rgba(159,176,191,0.12)" };
+  }
+  return (
+    codebookConsoleProvenanceMeta[tag] ?? {
+      label: "Unknown provenance",
+      color: "var(--text-lo)",
+      bg: "rgba(159,176,191,0.12)",
+    }
+  );
+}

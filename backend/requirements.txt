@@ -1,0 +1,95 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.13.4
+anthropic==0.39.0
+python-dotenv==1.0.1
+scikit-learn==1.5.2
+numpy==2.1.1
+networkx==3.3
+pandas==2.2.3
+python-multipart==0.0.9
+pdfplumber==0.11.10
+python-docx==1.1.2
+rank_bm25==0.2.2
+
+# Gemini API (Google AI Studio) — HexaFalls default prose provider (app/llm.py)
+# and vision extraction (app/gemini_vision.py). Installed unconditionally, same
+# discipline as anthropic above; only actually called when LLM_PROVIDER=gemini
+# or GEMINI_VISION_ENABLED=1 and GEMINI_API_KEY is present.
+google-genai>=1.0.0
+
+# MongoDB Atlas audit ledger (app/audit.py, plan §D). Installed unconditionally
+# (tiny dependency, no heavy transitive deps) but only actually connects when
+# MONGODB_URI is set and reachable — unset/unreachable falls back to a local
+# JSONL ledger, never raises. dnspython (for Atlas's `mongodb+srv://` URIs)
+# is a plain dependency of pymongo>=4.16 now, not an extra — `[srv]` produces
+# a "does not provide the extra 'srv'" warning on this version and is dropped.
+pymongo==4.16.0
+
+# Solana devnet notarization (app/notary.py, plan §E). Installed
+# unconditionally (confirmed: resolves with zero conflicts against every
+# other pin in this file) but only actually used when SOLANA_ENABLED=1 —
+# off by default, notary.py no-ops without ever importing these.
+solana==0.40.1
+solders==0.28.0
+
+# Copilot conversational edge — LangGraph (app/agents/copilot_agent.py, plan
+# §F2). Installed unconditionally but only actually imported when
+# COPILOT_AGENT_ENABLED=1 AND GEMINI_API_KEY is present (lazy import inside
+# the agent module — a keyless boot must never even try to import these).
+# Confirmed via a real dependency resolution: zero conflicts against every
+# other pin in this file (pymongo bumped 4.9.2->4.16.0 above to satisfy
+# langchain-mongodb's >=4.12 floor — audit.py's pymongo usage is a single
+# plain MongoClient(...) call, unaffected by the bump). This is the heaviest
+# dependency addition all session (pulls in langchain-classic, sqlalchemy,
+# etc.) — an accepted, deliberate cost of the plan's "framework allowed at
+# the Copilot edge only" carve-out, never imported by the verdict core.
+langgraph==1.2.9
+langchain-google-genai==4.3.1
+langgraph-checkpoint-mongodb==0.4.0
+
+# Codebook MCP client (step 5, docs/BUILD_PLAN_CODEBOOK.md) — only imported
+# when CODEBOOK_ENABLED=1 (app/codebook_client.py), but installed
+# unconditionally same as rank_bm25 above. Pinned to
+# mcp==1.9.4 + starlette==0.38.6 identically to
+# standards-service/requirements.txt (see that file's comment): the latest
+# mcp forces starlette>=1.0, which breaks fastapi==0.115.0's own
+# starlette<0.39 pin. Confirmed this exact pair resolves clean and this
+# backend's own app still imports/boots normally against it.
+mcp==1.9.4
+starlette==0.38.6
+
+# Codebook Console (docs/codebook_console.md) — app/codebook_rest_client.py
+# talks plain REST to standards-service's retrieval endpoints directly via
+# httpx, rather than the MCP client above. Already an installed transitive
+# dependency of mcp/anthropic (confirmed httpx==0.28.1 present); pinned here
+# explicitly now that it's a direct import, not just incidental.
+httpx==0.28.1
+
+# --------------------------------------------------------------------------- #
+# OPTIONAL — LLM-powered compliance extraction (app/llm_extract.py).
+# NOT installed by default: the offline demo above is fully reproducible without
+# it, and LLM extraction only runs when LLM_EXTRACTION_ENABLED=1 AND a Claude
+# Code subscription token (CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`) is
+# present. Installing it transitively bumps pydantic (2.9.2 -> 2.13.x), mcp, and
+# uvicorn; the backend still imports and boots against those (verified). Enable
+# with:  uv pip install claude-agent-sdk   (needs the Claude Code CLI on PATH).
+#
+# claude-agent-sdk>=0.2.125
+
+# --------------------------------------------------------------------------- #
+# OPTIONAL — Actian VectorAI DB vector-store backend (app/retrieval/vector_store.py,
+# plan §C). NOT installed by default: RETRIEVAL_VECTOR_STORE=numpy (the default)
+# never imports this package, and every retrieval eval runs against the numpy
+# path regardless. Only needed when RETRIEVAL_VECTOR_STORE=actian AND a real
+# Actian VectorAI DB container is running (docker-compose.actian.yml, repo
+# root). NOTE: the plan's own quickstart guessed the package name wrong —
+# `actian-vectorai` does not exist on PyPI; confirmed via a real dependency
+# resolution that the correct PIP package name is below. The IMPORTABLE module
+# is `actian_vectorai` though (not `actian_vectorai_client`) — confirmed by
+# actually installing it and inspecting site-packages; see
+# app/retrieval/vector_store.py's import comment. Installing it transitively
+# bumps pydantic (2.9.2 -> 2.13.x), same discipline as claude-agent-sdk above.
+# Enable with:  uv pip install actian-vectorai-client
+#
+# actian-vectorai-client==1.0.2

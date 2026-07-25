@@ -1,0 +1,45 @@
+{
+  "status": "ran",
+  "n_cases": 5,
+  "n_pass": 5,
+  "accuracy": 1.0,
+  "method": "Actian VectorAI DB parity vs. the numpy reference path over the real structural_standard_codes corpus. Asserts top-hit document_id PARITY (not float cosine equality \u2014 an ANN backend may legitimately reorder near-ties), plus the same RETRIEVAL_FLOOR abstention gate on a gibberish query.",
+  "actian_url": "localhost:6574",
+  "cases": [
+    {
+      "name": "top_hit_doc_id_parity: 'What is the minimum nominal cover for footings und'",
+      "group": "known_answer_parity",
+      "expected": "is456_2000",
+      "actual": "is456_2000",
+      "pass": true
+    },
+    {
+      "name": "top_hit_matches_hand_verified_doc: 'What is the minimum nominal cover for footings und'",
+      "group": "known_answer_parity",
+      "expected": "is456_2000",
+      "actual": "is456_2000",
+      "pass": true
+    },
+    {
+      "name": "top_hit_doc_id_parity: 'What is the importance factor I for hospital build'",
+      "group": "known_answer_parity",
+      "expected": "is1893_part1_2016",
+      "actual": "is1893_part1_2016",
+      "pass": true
+    },
+    {
+      "name": "top_hit_matches_hand_verified_doc: 'What is the importance factor I for hospital build'",
+      "group": "known_answer_parity",
+      "expected": "is1893_part1_2016",
+      "actual": "is1893_part1_2016",
+      "pass": true
+    },
+    {
+      "name": "actian_gibberish_query_abstains",
+      "group": "abstention",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ]
+}
