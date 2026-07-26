@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Optional
 
 from . import clock
+from . import supply_chain_overrides as overrides
 from .data_loader import load_schedule, load_supply_chain
 from .evidence_links import link_activity, link_rfi
 from .schedule import PROJECT_START, TODAY_DAY, _cpm
@@ -219,10 +220,20 @@ def _equipment_spec_ncr(shipment_id: str, procurement_item: str, spec: Equipment
     )
 
 
+def _root_cause_with_override(raw_milestones: list[dict], shipment_id: str, days_at_risk: int) -> str | None:
+    base = _root_cause(raw_milestones) if days_at_risk > 0 else None
+    delta = overrides.get_delta(shipment_id)
+    if delta == 0:
+        return base
+    note = f"manually adjusted {delta:+d}d via field update"
+    return f"{base}; {note}" if base else note
+
+
 def _build(raw: dict) -> Shipment:
     milestones, current_stage, delay, final_planned = _milestones(raw["milestones"])
     required = _required_on_site_by(raw["wbs_id"])
     projected_arrival = final_planned + delay if delay > 0 else final_planned
+    projected_arrival += overrides.get_delta(raw["id"])
     days_at_risk = max(0, projected_arrival - required)
     alternatives = _alternatives(raw.get("alternatives", []), required)
     wbs_id = raw["wbs_id"]
@@ -238,7 +249,7 @@ def _build(raw: dict) -> Shipment:
         projected_arrival_day=projected_arrival,
         days_at_risk=days_at_risk,
         on_critical_path=_on_critical_path(wbs_id),
-        root_cause=_root_cause(raw["milestones"]) if days_at_risk > 0 else None,
+        root_cause=_root_cause_with_override(raw["milestones"], raw["id"], days_at_risk),
         alternatives=alternatives,
         equipment_spec=_equipment_spec_check(raw),
         linked_rfi=link_rfi(wbs_id=wbs_id, query_text=raw["procurement_item"]),
