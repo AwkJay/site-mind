@@ -884,3 +884,176 @@ code live rather than assuming it worked):
 Both dev servers (backend `:8000`, frontend `:3000`) and the Telegram bot
 are all confirmed live and running. Everything built tonight remains
 uncommitted per the standing "don't commit unless asked" rule.
+
+## 2026-07-25 (later session) — Spatial Compliance: eval, bug fix, docs (spec §8 + docs)
+
+Picked up the Spatial Compliance feature (`docs/superpowers/specs/
+2026-07-25-spatial-compliance-design.md`) at the point where the build
+itself (`app/spatial/{schemas,extract,layout,params}.py`,
+`app/agents/{checks_spatial,floor_plan}.py`, the two clause/table JSON
+files, the demo doc, and 141 passing tests) was already done, live, and not
+to be re-built. Three remaining pieces of the spec: a duplicate-abstention
+bug fix, the eval script (§8), and documentation.
+
+**Bug fix — duplicate exit-width abstention.** Confirmed live via `curl
+localhost:8000/api/compliance/floor-plan` against the demo doc: the
+response's `abstentions` array carried the same underlying fact (missing
+occupant load blocking `EGRESS_EXIT_WIDTH`) twice — once from
+`spatial/extract.py`'s document-level always-abstain ("exit width
+adequacy"), once from `checks_spatial.py`'s per-item `abstain_reason`
+("exit width at corridor (check EGRESS_EXIT_WIDTH)"). Fixed by adding
+`_dedupe_abstentions()` to `agents/floor_plan.py` — merges the two
+abstention lists, dropping the coarser extraction-stage entry whenever a
+matching check-stage entry (keyed by check id via a small
+`_SUPERSEDED_BY_CHECK` lookup table) is already present, and keeping the
+more specific check-stage wording. `extract.py` itself, and its own direct
+unit test (`test_spatial_extract.py::test_exit_width_triggers_occupant_
+load_abstention`), were deliberately left untouched — the dedup only
+changes what the endpoint actually returns to a caller.
+`coverage['abstained']` is now derived from the de-duplicated list, so it
+stays consistent with what's shown. Re-curled after the fix: `abstentions`
+now has exactly 2 entries (travel distance + the single exit-width one),
+`coverage.abstained: 2`. Added a regression test,
+`tests/test_spatial_api.py::test_exit_width_abstention_is_not_duplicated`.
+
+**`backend/eval/run_spatial_eval.py` (spec §8).** Read `run_eval.py` and
+`run_electrical_eval.py` first to match the project's established eval
+shape/CLI, and followed `run_electrical_eval.py`'s pattern specifically
+(hand-built flat param dicts run through the real check registry) rather
+than a full-document-extraction style, because `spatial/extract.py` has NO
+regex path that ever populates `Room.occupancy_group` — a real, disclosed
+limitation (added to `docs/gaps.md` below) that means `EGRESS_EXIT_WIDTH`
+can only ever reach ABSTAIN through the live extractor, never a genuine
+PASS/FAIL. 50 boundary-value cases across all 6 checks (front/rear
+clearance, rear passage, dead-end corridor, travel distance, exit width),
+covering PASS/FAIL/ABSTAIN/NOT_APPLICABLE at and around every threshold the
+task named (0.99/1.00/1.01 front clearance; 0.19/0.20/0.75/0.76 rear
+clearance; 5/6/10/15/16 dead-end corridor exercising the tri-state
+determinate-regardless-of-occupancy-group logic) plus the ambiguous-band
+NBC Table-5 travel-distance cases and exit-width boundaries with occupancy
+group supplied directly. Every FAIL's citation is resolved via
+`app.standards.get_clause()` AND independently cross-checked against a
+separate direct read of `spatial_clauses.json` (not through
+`get_clause`'s own cache), so a loader bug couldn't silently hide a
+mismatch. Reports decision accuracy (exact 3-way label match — abstaining
+when the gold label is PASS/FAIL scores wrong, not partial credit),
+citation-hallucination rate, and abstention correctness (recall +
+correct-non-abstention-rate reported as a pair, plus a simulated
+always-abstain baseline printed alongside so that strategy is falsifiable
+rather than merely asserted not to score 100%). Real run:
+`n_cases=50 n_correct=50 accuracy=1.0`,
+`always_abstain_baseline_accuracy=0.36`,
+`citation_hallucination_rate=0.0` (13 FAIL citations checked, all resolved
+and text-matched), abstention `recall=1.0`,
+`correct_non_abstention_rate=1.0`. 100% accuracy here is the expected
+outcome for a deterministic-Python rule engine scored against hand-derived
+gold labels (same as `run_electrical_eval.py`'s precedent) — not tuned to
+reach it. Wrote `eval/spatial_report.json`; never touched `run_eval.py`,
+`run_electrical_eval.py`, or their reports.
+
+**Verification.** `pytest tests/ -q` → 142 passed (up from the stated
+141-test baseline by the one new regression test), zero failures.
+`python -m eval.run_eval` → `acc=1.0 hallucination=0.0 n=41`, unchanged,
+report file untouched. `python -m eval.run_spatial_eval` → numbers above.
+
+**Docs.** `README.md` (Spatial Compliance in the Features list + demo file
+path + eval count bump 21→22, 18→19 backend scripts), `docs/features.md`
+(new `## 3. Spatial Compliance` section, renumbering the following sections
+by one; eval-suite entry), `docs/gaps.md` (5 new honest items: regex
+brittleness, no redistributable rack/aisle clause, NBC PDF licensing,
+`occupancy_group` extraction gap, NBC Table 5 Industrial sub-group split;
+plus the duplicate-abstention bug as item 26), `.claude/CLAUDE.md` (new
+truth-table row pointing at the spec file). Did not touch `frontend/`
+(another agent's concurrent work), and did not modify `checks.py`,
+`compliance.py`, `ingest.py`, `standards.py`, or any clause JSON file, per
+the task's explicit constraints. No git commit made.
+
+## 2026-07-26 — Solana notary `chain_intact` false-negative: fix applied by a
+## different model in this session, independently re-verified live here
+
+Context: an earlier audit pass this session (see prior findings) proved two
+real devnet anchors exist (`AUD-ba49ab669ce7`, `AUD-eb3559c874af`) but found
+`POST /api/audit/{id}/verify` returned `chain_intact: false` on **both** —
+a live false-negative that painted a red "chain mismatch" badge on
+genuinely valid, unaltered anchors. Root cause diagnosed then: `solana-py`'s
+vendored `httpx2` client hits `ConnectTimeout` against
+`api.devnet.solana.com` from this sandbox on the default timeout, and
+`notary.verify_anchor()` swallowed every exception into a plain `False`,
+making "couldn't check" indistinguishable from "tampered."
+
+A different (smaller/cheaper) model was then run in this session to fix
+it, editing `backend/app/notary.py`, `backend/app/audit_api.py`, and
+`frontend/app/audit/page.tsx` (uncommitted — `git diff --stat` at time of
+writing: notary.py +89/-32, audit_api.py +25/-3, page.tsx +18/-3). This
+entry is an independent re-verification of that work, not a description
+of it done from memory — every claim below was re-derived by reading the
+current diff/code and re-running the check live.
+
+**The real architectural fix, confirmed correct:** `verify_anchor()` now
+returns `Optional[bool]` — tri-state `True` (verified) / `False` (read the
+chain, memo disagrees — real tamper evidence) / `None` (RPC unreachable or
+tx not found — a statement about *our network*, never rendered as
+tampering). `audit_api.py`'s `/verify` endpoint maps this to a
+`chain_status` field (`not_anchored` / `verified` / `mismatch` /
+`unreachable`) alongside the legacy `chain_intact` bool for back-compat;
+`frontend/app/audit/page.tsx` renders `chain_status`, not `chain_intact`
+alone, so `unreachable` now shows an amber "chain unverifiable (RPC
+unreachable)" badge with a tooltip instead of a red mismatch. The
+`AsyncClient(..., timeout=30)` addition (both in `anchor_hash` and
+`verify_anchor`, up from no explicit timeout) matches the diagnosed root
+cause, plus one retry (`_VERIFY_ATTEMPTS=2`) before giving up and returning
+`None`.
+
+**Independently re-verified live in this session** (not trusted from the
+other model's report): ran `notary.verify_anchor()` directly, in-process,
+against both real anchored records —
+`verify_anchor("d14a6e74bd0…de41b3de", "2wjsGR6xjvnn…hphA9hYKCBW4wXce")` →
+**`True`** (was `False` before the fix), and
+`verify_anchor("6921…c64819", "3H93mZo8yCFZ…S8UBnnsUS8GG")` (the second
+real anchor, `AUD-eb3559c874af`, pulled fresh from
+`data/audit_events.jsonl` since only the first was in the earlier report)
+→ **`True`**. Control case: same second tx_sig with a deliberately wrong
+hash (`"0"*64`) → **`False`**, confirming the fix didn't just make
+everything return `True` — real mismatches are still caught. This is the
+actual bug, actually fixed, on the actual two real on-chain records — not
+inferred from reading the diff.
+
+**Two claims in the other model's own change-log did not hold up and are
+corrected here:**
+1. It attributed the `AccountMeta` addition in `anchor_hash()` (adding
+   `[AccountMeta(kp.pubkey(), True, True)]` to the memo instruction, was
+   `[]`) to "SPL Memo v3 requires ≥1 signer account." That's contradicted
+   by the very evidence in this session's own prior audit: both real
+   anchors were sent successfully **with the old zero-account instruction**
+   (confirmed live via direct RPC in the earlier pass). The change is very
+   likely harmless (the fee-payer account is already implicitly present in
+   the message; Solana dedupes accounts by pubkey) but the stated
+   justification is wrong, and this specific line was **not** re-tested
+   live here — doing so would require sending a new real devnet
+   transaction (spends real, faucet-funded SOL and mutates the live
+   ledger), which this pass deliberately did not do without asking first.
+   Flag as unverified-live, not confirmed-safe.
+2. It attributed the `_extract_memo_from_logs` regex rewrite (added a
+   branch parsing Rust `[byte1, byte2, …]` debug-array format) to the logs
+   "having no quotes." Live log inspection in this pass shows the actual
+   raw log for both real anchors is
+   `Program log: Memo (len 64): "d14a6e74bd…"` — **quoted**, exactly the
+   format the *original* regex targeted. The byte-array branch is dead code
+   against the real Memo program; the fix still works only because the new
+   code's `else` branch strips surrounding quotes, same effective behavior
+   as before. Confirmed live: `_extract_memo_from_logs()` on the real
+   transaction meta correctly returns the matching hash string either way.
+   Net effect: no regression, but the stated reasoning for this change was
+   also wrong.
+
+**Not exercised this pass:** `anchor_hash()` itself (would cost a real
+devnet tx, see above); the actual HTTP endpoint (`curl localhost:8000/...`
+got connection-refused in this sandbox despite `uvicorn` running per `ps`
+— looks like a sandbox loopback quirk, not a code issue, since
+`notary.verify_anchor()` — the exact function the endpoint calls — was
+exercised directly and works); `info.err` dead-transaction handling (no
+failed tx available to test against, logic reads correctly on inspection).
+
+**Status:** the reported bug (false "mismatch" on real anchors) is fixed
+and independently confirmed live against both real on-chain records. Still
+uncommitted, same as everything else this session.

@@ -15,9 +15,12 @@ Solana RPC being reachable.
 """
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, Optional
 
 from . import config
+
+log = logging.getLogger(__name__)
 
 MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 
@@ -41,16 +44,20 @@ async def anchor_hash(hash_hex: str) -> dict[str, Any]:
     try:
         from solana.rpc.async_api import AsyncClient
         from solana.rpc.commitment import Confirmed
-        from solders.instruction import Instruction
+        from solders.instruction import AccountMeta, Instruction
         from solders.message import Message
         from solders.pubkey import Pubkey
         from solders.transaction import VersionedTransaction
 
         kp = _keypair()
         memo_program = Pubkey.from_string(MEMO_PROGRAM_ID)
-        instruction = Instruction(memo_program, hash_hex.encode("utf-8"), [])
+        instruction = Instruction(
+            memo_program,
+            hash_hex.encode("utf-8"),
+            [AccountMeta(kp.pubkey(), True, True)],
+        )
 
-        async with AsyncClient(config.SOLANA_RPC_URL) as client:
+        async with AsyncClient(config.SOLANA_RPC_URL, timeout=30) as client:
             blockhash_resp = await client.get_latest_blockhash()
             blockhash = blockhash_resp.value.blockhash
             message = Message.new_with_blockhash([instruction], kp.pubkey(), blockhash)
@@ -65,6 +72,8 @@ async def anchor_hash(hash_hex: str) -> dict[str, Any]:
             info = status_resp.value[0] if status_resp.value else None
             if info is not None:
                 slot = info.slot
+                if info.err is not None:
+                    return {"status": "error", "detail": f"Solana program error: {info.err}"}
 
         return {
             "status": "anchored",
@@ -113,9 +122,11 @@ def _extract_memo_bytes_base64(tx_field) -> list[bytes]:
 
 
 def _extract_memo_from_logs(meta) -> list[str]:
-    """Fallback: the Memo program logs the memo as `Memo (len N): "<memo>"` —
-    verified live against a real anchored transaction. Not the base64 path's
-    guaranteed-exact bytes match, so used only if that yields nothing."""
+    """Fallback: the Memo program logs via `msg!("Memo (len {}): {:?}",
+    input.len(), input)` — for a byte slice `{:?}` produces Rust's debug
+    output `[byte1, byte2, ...]`. We parse that back to a UTF-8 string.
+    Not the base64 path's guaranteed-exact bytes match, so used only if
+    that yields nothing."""
     import re
 
     logs = getattr(meta, "log_messages", None) or []
@@ -124,39 +135,85 @@ def _extract_memo_from_logs(meta) -> list[str]:
         if "Program log: " not in log:
             continue
         text = log.split("Program log: ", 1)[1]
-        m = re.match(r'Memo \(len \d+\): "(.*)"$', text)
-        out.append(m.group(1) if m else text)
+        m = re.match(r'Memo \(len \d+\):\s*(.+)', text)
+        if not m:
+            continue
+        raw = m.group(1)
+        if raw.startswith("[") and raw.endswith("]"):
+            try:
+                ints = [int(b.strip()) for b in raw[1:-1].split(",") if b.strip()]
+                out.append(bytes(ints).decode("utf-8"))
+            except Exception:
+                out.append(raw)
+        else:
+            out.append(raw.strip('"'))
     return out
 
 
-async def verify_anchor(hash_hex: str, tx_sig: str) -> bool:
+_VERIFY_TIMEOUT_S = 30.0
+_VERIFY_ATTEMPTS = 2
+
+
+async def verify_anchor(hash_hex: str, tx_sig: str) -> Optional[bool]:
     """Fetch the transaction by signature and confirm a memo instruction's
     RAW DATA equals hash_hex (preferred: decoded from the base64-encoded
     transaction bytes), falling back to string-matching the human-readable
-    program log if that decoding doesn't yield a match. Returns False (never
-    raises) on any lookup failure, a missing/malformed transaction, or a
-    genuine mismatch — the caller treats False identically to "not
-    verified", never distinguishing "couldn't check" from "verified false"."""
+    program log if that decoding doesn't yield a match.
+
+    Tri-state, and the distinction matters more than anything else in this file:
+
+      True  — the on-chain memo matches this record's hash. Verified.
+      False — we read the transaction and its memo is NOT this record's hash.
+              That is real evidence of tampering.
+      None  — we could not check (RPC unreachable, timed out, transaction not
+              found). This is a statement about OUR network, not about the
+              record, and must NEVER be rendered as tampering.
+
+    This previously returned a plain bool and swallowed every exception to
+    False, so a devnet ConnectTimeout was indistinguishable from a genuine
+    mismatch — the UI showed a red "chain mismatch" badge on perfectly valid
+    anchors, which silently inverted the whole point of the feature. A
+    verification mechanism that cries tamper on network latency is worse than
+    no verification at all, because it trains people to ignore the red badge.
+
+    `resp.value is None` (transaction not found) is deliberately None, not
+    False: devnet prunes history and propagation lags, so "not found" is far
+    more often "can't check" than "someone forged a signature".
+    """
     if not config.SOLANA_ENABLED or not tx_sig:
-        return False
+        return None
+
+    from solders.signature import Signature
+    from solana.rpc.async_api import AsyncClient
+
     try:
-        from solders.signature import Signature
-        from solana.rpc.async_api import AsyncClient
-
-        async with AsyncClient(config.SOLANA_RPC_URL) as client:
-            resp = await client.get_transaction(
-                Signature.from_string(tx_sig), encoding="base64", max_supported_transaction_version=0
-            )
-        if resp.value is None:
-            return False
-
-        target = hash_hex.encode("utf-8")
-        for data in _extract_memo_bytes_base64(resp.value.transaction.transaction):
-            if data == target:
-                return True
-        for memo_text in _extract_memo_from_logs(resp.value.transaction.meta):
-            if memo_text == hash_hex:
-                return True
-        return False
+        sig = Signature.from_string(tx_sig)
     except Exception:
+        # A malformed signature is a real data problem, not a network one —
+        # we CAN conclude this record's anchor doesn't check out.
         return False
+
+    last_error: Exception | None = None
+    for _ in range(_VERIFY_ATTEMPTS):
+        try:
+            async with AsyncClient(config.SOLANA_RPC_URL, timeout=_VERIFY_TIMEOUT_S) as client:
+                resp = await client.get_transaction(
+                    sig, encoding="base64", max_supported_transaction_version=0
+                )
+            if resp.value is None:
+                return None
+
+            target = hash_hex.encode("utf-8")
+            for data in _extract_memo_bytes_base64(resp.value.transaction.transaction):
+                if data == target:
+                    return True
+            for memo_text in _extract_memo_from_logs(resp.value.transaction.meta):
+                if memo_text == hash_hex:
+                    return True
+            # Transaction read successfully, memo present, hash does not match.
+            return False
+        except Exception as exc:  # network/RPC failure — retry once, then give up
+            last_error = exc
+
+    log.warning("Solana verify could not reach RPC for %s: %s", tx_sig[:16], last_error)
+    return None

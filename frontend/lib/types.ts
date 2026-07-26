@@ -35,12 +35,28 @@ export type SourceType =
   | "primary_scan_ocr"
   | "primary_native_pdf";
 
+// Mirrors backend/app/schemas.py ClauseRetrievalProvenance — set only by the
+// Compliance pillar's clause_resolver.py, when it resolved this citation's
+// clause via the live Actian-backed vector index rather than the hardcoded
+// local clause cache. Optional/absent everywhere else (commissioning, supply
+// chain, the old get_clause() path) — never assumed present.
+export interface ClauseRetrievalProvenance {
+  resolved_via: "vector_index" | "local_cache";
+  rank?: number | null;
+  score?: number | null;
+  query?: string | null;
+  chunk_source?: string | null;
+  vectors_searched?: number | null;
+  note?: string | null; // set on local_cache: why the index didn't surface it
+}
+
 export interface Citation {
   standard: string; // e.g. "IS 456:2000"
   clause: string; // e.g. "26.4.2.2"
   text: string; // exact clause text
   verify_url: string;
   source_type?: SourceType; // defaults to "codebook_verified" server-side
+  retrieval?: ClauseRetrievalProvenance | null; // present only from clause_resolver.py
 }
 
 // GET /api/clause-context — powers the in-app clause viewer popup
@@ -74,7 +90,7 @@ export interface NCR {
   confirm_with?: string | null; // ADVISORY, e.g. "EOR"
   governing_note?: string | null; // set when >1 clause governs this parameter
   status?: NcrStatus;
-  domain?: "structural" | "electrical" | "mechanical"; // from the real Check.domain (compliance) or commissioning.py, defaults structural
+  domain?: "structural" | "electrical" | "mechanical" | "spatial"; // from the real Check.domain (compliance) or commissioning.py, defaults structural; "spatial" from checks_spatial.py
   verdict_tier?: VerdictTier; // defaults "certified" server-side
   extracted_rule?: ExtractedRule | null;
   computed_detail?: string | null; // rule_eval.evaluate()'s own detail string, shown verbatim
@@ -115,6 +131,12 @@ export interface DocItem {
   type: DocType;
   status: string; // "A – Approved" | "B – Approved as Noted" | "C – Revise & Resubmit" | "Pending"
   discipline: string;
+  // Filesystem-backed register rows only (GET /api/documents) — proof this row
+  // has a real file behind it, not a synthetic entry. Absent for rows created
+  // client-side from a direct "Upload DBR" (those are already an upload id).
+  filename?: string;
+  size_bytes?: number;
+  has_file?: boolean;
 }
 
 export interface RFISource {
@@ -392,6 +414,134 @@ export interface KgEdge {
 export interface KgGraph {
   nodes: KgNode[];
   edges: KgEdge[];
+}
+
+// ── Spatial Compliance (docs/superpowers/specs/2026-07-25-spatial-compliance-design.md) ──
+// Mirrors backend/app/spatial/schemas.py + layout.py's FloorPlan. The
+// stated-vs-inferred distinction (§3 of the spec) is the whole point: a check
+// may only ever read a "stated" value, and the UI must make the difference
+// between stated and inferred immediately visible, never blur it.
+export type SpatialProvenance = "stated" | "inferred";
+export type RoomZone = "server_hall" | "electrical" | "cooling" | "corridor" | "other";
+export type EquipmentKind = "switchboard" | "lv_panel" | "transformer" | "genset" | "crac" | "rack_row";
+export type Wall = "north" | "south" | "east" | "west";
+
+export interface PlacedRoom {
+  id: string;
+  name: string;
+  zone: RoomZone;
+  x_m: number;
+  y_m: number;
+  width_m: number;
+  length_m: number;
+  dimension_source: SpatialProvenance;
+  position_source: SpatialProvenance;
+}
+
+export interface PlacedEquipment {
+  id: string;
+  room_id: string;
+  kind: EquipmentKind;
+  x_m: number;
+  y_m: number;
+  front_clearance_m?: number | null;
+  rear_clearance_m?: number | null;
+  rear_passage_height_m?: number | null;
+  position_source: SpatialProvenance;
+}
+
+export interface PlacedExit {
+  id: string;
+  room_id: string;
+  wall: Wall | null;
+  x_m: number;
+  y_m: number;
+  width_mm: number;
+  position_source: SpatialProvenance;
+}
+
+// Mirrors backend/app/spatial/layout.py's TravelPath exactly — note there is
+// NO point geometry on the wire (the backend only knows a stated distance for
+// a room, not a drawn route). FloorMap derives a schematic line from the
+// room's centre to its nearest exit (or across the room if none) purely for
+// legibility; the only fact asserted on-canvas is the labelled distance_m,
+// which is real and stated.
+export interface TravelPath {
+  room_id: string | null;
+  distance_m: number;
+  source_quote: string;
+}
+
+// Landing shortly from a concurrent backend change — geometric clearance
+// checks rendered AS geometry (provided band vs required envelope), not just
+// prose. Optional/defensive: older backend responses simply omit this field,
+// and FloorMap must render nothing rather than crash when it's absent.
+export interface ClearanceRect {
+  x_m: number;
+  y_m: number;
+  width_m: number;
+  length_m: number;
+}
+
+export interface ClearanceZone {
+  equipment_id: string;
+  kind: "front" | "rear";
+  provided_m: number;
+  required_m: number | null;
+  status: "pass" | "fail" | "abstain";
+  clause_key: string;
+  provided_rect: ClearanceRect | null;
+  required_rect: ClearanceRect | null;
+}
+
+export interface FloorPlan {
+  rooms: PlacedRoom[];
+  equipment: PlacedEquipment[];
+  exits: PlacedExit[];
+  travel_paths: TravelPath[];
+  extent_m: [number, number];
+  notes: string[];
+  clearance_zones?: ClearanceZone[];
+}
+
+export type GeometryKind = "room" | "equipment" | "exit" | "path";
+
+export interface GeometryRef {
+  kind: GeometryKind;
+  id: string;
+}
+
+// Same NCR shape as everywhere else, plus a geometry_ref so the UI can pin
+// the finding onto the floor map.
+export interface SpatialFinding extends NCR {
+  geometry_ref: GeometryRef;
+}
+
+export interface SpatialAbstention {
+  what: string;
+  why: string;
+}
+
+export interface NotCheckedZone {
+  zone: string;
+  reason: string;
+}
+
+export interface SpatialCoverage {
+  params_extracted: number;
+  params_checked: number;
+  abstained: number;
+}
+
+export interface FloorPlanResult {
+  document_id: string;
+  has_spatial_data: boolean;
+  reason?: string | null;
+  floor_plan?: FloorPlan | null;
+  findings: SpatialFinding[];
+  abstentions: SpatialAbstention[];
+  not_checked_zones: NotCheckedZone[];
+  coverage: SpatialCoverage;
 }
 
 // SSE event shapes for the streaming compliance/copilot endpoints

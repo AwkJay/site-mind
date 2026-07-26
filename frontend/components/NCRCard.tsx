@@ -64,6 +64,14 @@ export function NCRCard({ ncr, index }: { ncr: NCR; index: number }) {
   const dm = domainMeta[ncr.domain ?? "structural"];
   const tier = tierMeta[ncr.verdict_tier ?? "certified"];
   const draft = ncr.verdict_tier === "computed_draft";
+  // The tier chip describes how the VERDICT was computed; the citation badge
+  // describes how trustworthy the SOURCE is. They're independent axes, and on a
+  // cross-source-unverified clause (e.g. Commissioning's compiled ASHRAE
+  // envelope) showing a green "Certified · pre-vetted" chip beside a red
+  // "Cross-source · unverified" one reads as self-contradictory. Suppress the
+  // tier chip in exactly that case — never suppress a DRAFT chip, which is a
+  // warning the reader must always see.
+  const showTier = draft || ncr.citation?.source_type !== "cross_source_unverified";
   return (
     <article
       className="animate-fadeUp rounded-card border border-line bg-bg-800"
@@ -84,9 +92,11 @@ export function NCRCard({ ncr, index }: { ncr: NCR; index: number }) {
           <Chip color={meta.color} bg={meta.bg}>
             <span aria-hidden>{meta.icon}</span> {meta.label}
           </Chip>
-          <Chip color={tier.color} bg={tier.bg}>
-            {tier.label}
-          </Chip>
+          {showTier && (
+            <Chip color={tier.color} bg={tier.bg}>
+              {tier.label}
+            </Chip>
+          )}
         </div>
       </header>
 

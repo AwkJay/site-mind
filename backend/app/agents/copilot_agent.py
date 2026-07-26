@@ -311,5 +311,13 @@ def chat(req: ChatRequest) -> ChatResponse:
         except Exception:
             logging.getLogger(__name__).warning("copilot_agent: run_chat failed; falling back.", exc_info=True)
 
-    fallback = single_shot_answer(req.message)
+    try:
+        fallback = single_shot_answer(req.message)
+    except Exception:
+        logging.getLogger(__name__).warning("copilot_agent: single_shot_answer failed; abstaining.", exc_info=True)
+        return ChatResponse(
+            answer="I don't have that information in the current project data — please check with the project team or the SiteMind dashboard.",
+            sources=[],
+            thread_id=thread_id,
+        )
     return ChatResponse(answer=fallback.answer, sources=fallback.sources, seen_before=fallback.seen_before, thread_id=thread_id)

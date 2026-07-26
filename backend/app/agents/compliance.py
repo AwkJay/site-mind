@@ -19,7 +19,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from .. import audit, config, ingest, llm, llm_extract, trace
+from .. import audit, clause_resolver, config, ingest, ingest_pipeline, llm, llm_extract, trace
 from ..data_loader import fixture, load_submittals, params_for
 from ..schemas import NCR, ComplianceResult, Citation, CoverageStat, ExtractedRule, OverlapNote, SourceSpan
 from ..standards import all_clauses, get_clause
@@ -122,7 +122,13 @@ def _advisory_ncr(param: dict, ncr_id: str) -> Optional[NCR]:
     """The IS 1893 I=1.5 judgment-catch (the memorable demo beat)."""
     if param.get("param") != "importance_factor" or param.get("value", 1.5) >= 1.5:
         return None
-    citation = get_clause("IS1893_7.2.3")
+    # This advisory has no CHECKS entry (it's a judgment call, not a checks.py
+    # rule), so there is no rule_text to resolve with — a hand-written query in
+    # the same register clause_resolver expects (verified live: IS 1893's real
+    # "7.2.3 Importance Factor (I)" clause retrieves at rank 2 in the corpus).
+    citation, _meta = clause_resolver.resolve_clause(
+        "seismic importance factor for important service buildings", "IS1893_7.2.3"
+    )
     fx = (fixture("compliance_prose.json") or {}).get(param.get("id"), {})
     finding = fx.get(
         "finding",
@@ -161,7 +167,11 @@ def _advisory_ncr(param: dict, ncr_id: str) -> Optional[NCR]:
 
 
 def _violation_ncr(param: dict, check, ncr_id: str) -> NCR:
-    citation = get_clause(check["clause_key"])
+    # Citation now resolved via the live Actian vector index (clause_resolver.py),
+    # queried with the check's own rule_text — falls back to the local digitised
+    # cache (the old get_clause() behaviour) whenever retrieval is off, the
+    # corpus can't confirm the clause, or anything throws. Never raises.
+    citation, _meta = clause_resolver.resolve_clause(check["rule_text"], check["clause_key"])
     prose = _prose(param, check, citation) if citation else _offline_prose(param, check)
     return NCR(
         id=ncr_id,
@@ -407,6 +417,18 @@ def evaluate_with_params(document_id: str) -> tuple[ComplianceResult, dict[str, 
         if not params and document_id not in known_ids and not ingest.get_upload(document_id):
             raise HTTPException(status_code=404, detail=f"Unknown document_id: {document_id}")
 
+    # Per-document provider pick: the 2 pinned golden demo files stay on Gemini
+    # (their cached prose must never drift); every other document — a genuinely
+    # new upload, or even an edited copy of a demo file — routes through IAMHC.
+    # Kept in sync with ingest_pipeline._PINNED_DEMO_HASHES (not imported here
+    # to avoid a circular import for the sake of deduping two strings).
+    _upload = ingest.get_upload(document_id)
+    _content_hash = (_upload or {}).get("content_hash")
+    _provider = "gemini" if _content_hash in {
+        "85f3a534537f6daf83514ca2af2e3b6cccf8e4dbd2be479cc09bb2b6937f8140",
+        "ffeb88d6621a964930a465c23ed9d187ff61285ab5ba746b7f397ddd9dcbcbd9",
+    } else "iamhc"
+
     ncrs: list[NCR] = []
     conforming: list[str] = []
     overlaps: list[OverlapNote] = []
@@ -426,55 +448,56 @@ def evaluate_with_params(document_id: str) -> tuple[ComplianceResult, dict[str, 
             standards_by_domain.setdefault(domain, set()).add(c.standard)
 
     _checks_t0 = time.time()
-    for param in params:
-        # Special ADVISORY (judgment call) — not a binary pass/fail.
-        adv = _advisory_ncr(param, f"NCR-{seq:04d}")
-        if adv is not None:
-            ncrs.append(adv)
-            param_by_ncr[adv.id] = param
-            _register("IS1893_7.2.3")
-            _register("IS1893_6.4.2")  # second clause backing the I=1.5 catch
-            seq += 1
-            checked += 1
-            checks_run += 1
-            continue
-
-        applied = applicable_checks(param)
-        if not applied:
-            if config.COMPLIANCE_RULE_EXTRACTION and config.RETRIEVAL_ENABLED:
-                finding = _computed_draft_finding(param, f"NCR-{seq:04d}")
-                if finding is not None:
-                    ncrs.append(finding)
-                    param_by_ncr[finding.id] = param
-                    seq += 1
-                checked += 1
-            continue
-        for check in applied:
-            checked += 1
-            checks_run += 1
-            check_domain = check.get("domain", "structural")
-            _register(check["clause_key"], check_domain)
-
-            # Multi-clause governance: surface overlap + name the binding clause.
-            overlap = None
-            if check.get("also_governed_by"):
-                for k in check["also_governed_by"]:
-                    _register(k, check_domain)
-                if check["id"] in _PRIMARY_COVER_FLOOR:
-                    overlap = _cover_overlap(param, check)
-                    if overlap:
-                        overlaps.append(overlap)
-
-            label = f"{param.get('element')}: {param.get('param', '').replace('_', ' ')}"
-            if check["rule"](param):
-                conforming.append(f"{label} — conforms to {check['clause_key']}")
-            else:
-                ncr = _violation_ncr(param, check, f"NCR-{seq:04d}")
-                if overlap:
-                    ncr.governing_note = overlap.note
-                ncrs.append(ncr)
-                param_by_ncr[ncr.id] = param
+    with llm.use_provider(_provider):
+        for param in params:
+            # Special ADVISORY (judgment call) — not a binary pass/fail.
+            adv = _advisory_ncr(param, f"NCR-{seq:04d}")
+            if adv is not None:
+                ncrs.append(adv)
+                param_by_ncr[adv.id] = param
+                _register("IS1893_7.2.3")
+                _register("IS1893_6.4.2")  # second clause backing the I=1.5 catch
                 seq += 1
+                checked += 1
+                checks_run += 1
+                continue
+
+            applied = applicable_checks(param)
+            if not applied:
+                if config.COMPLIANCE_RULE_EXTRACTION and config.RETRIEVAL_ENABLED:
+                    finding = _computed_draft_finding(param, f"NCR-{seq:04d}")
+                    if finding is not None:
+                        ncrs.append(finding)
+                        param_by_ncr[finding.id] = param
+                        seq += 1
+                    checked += 1
+                continue
+            for check in applied:
+                checked += 1
+                checks_run += 1
+                check_domain = check.get("domain", "structural")
+                _register(check["clause_key"], check_domain)
+
+                # Multi-clause governance: surface overlap + name the binding clause.
+                overlap = None
+                if check.get("also_governed_by"):
+                    for k in check["also_governed_by"]:
+                        _register(k, check_domain)
+                    if check["id"] in _PRIMARY_COVER_FLOOR:
+                        overlap = _cover_overlap(param, check)
+                        if overlap:
+                            overlaps.append(overlap)
+
+                label = f"{param.get('element')}: {param.get('param', '').replace('_', ' ')}"
+                if check["rule"](param):
+                    conforming.append(f"{label} — conforms to {check['clause_key']}")
+                else:
+                    ncr = _violation_ncr(param, check, f"NCR-{seq:04d}")
+                    if overlap:
+                        ncr.governing_note = overlap.note
+                    ncrs.append(ncr)
+                    param_by_ncr[ncr.id] = param
+                    seq += 1
 
     run.steps.append(
         {
@@ -523,8 +546,25 @@ _NCR_PROSE_FIELDS = ("finding", "why_it_matters", "corrective_action", "recommen
 def ncr_dedup_key(ncr: NCR) -> dict:
     """The deterministic subset of an NCR — everything the audit ledger's
     content_hash should dedup on (severity, citation, values, verdict_tier,
-    etc.), excluding LLM prose. See `_NCR_PROSE_FIELDS`."""
-    return {k: v for k, v in ncr.model_dump().items() if k not in _NCR_PROSE_FIELDS}
+    etc.), excluding LLM prose. See `_NCR_PROSE_FIELDS`.
+
+    Also strips `citation.retrieval` (clause_resolver.py's provenance:
+    rank/score/resolved_via/query) — legitimately NON-deterministic across two
+    evaluations of the exact same decision. Live testing while building
+    clause_resolver.py showed a real example: the same check against the same
+    document resolved via the vector index (rank 8) on one run and fell back to
+    the local cache on the next (an ANN search can reorder near-tied results,
+    and a transient index outage can flip resolved_via) — with NO change to the
+    underlying decision. clause_resolver.py always keeps citation.standard/
+    clause/text/verify_url/source_type as the stable curated values regardless
+    of resolved_via (see its module docstring), so those stay in the hash;
+    only the volatile HOW-it-was-found metadata is excluded. Hashing it would
+    silently break idempotency: re-checking an unchanged decision could mint a
+    "new" ledger entry just because a search reordered."""
+    data = {k: v for k, v in ncr.model_dump().items() if k not in _NCR_PROSE_FIELDS}
+    if data.get("citation"):
+        data["citation"] = {k: v for k, v in data["citation"].items() if k != "retrieval"}
+    return data
 
 
 def _record_upload_audit(document_id: str, result: ComplianceResult) -> None:
@@ -554,81 +594,103 @@ async def ingest_document(file: UploadFile = File(...)) -> dict:
     the narrow parameter set the CHECK REGISTRY can evaluate, and explicitly
     abstains (never guesses) on anything it can't confidently find. Returns a
     document_id that /compliance/check and /compliance/check/stream accept
-    exactly like any pre-loaded document."""
+    exactly like any pre-loaded document.
+
+    The extract -> perceive -> register pipeline itself lives in
+    `ingest_pipeline.run_ingest_pipeline` — shared with
+    POST /api/documents/{doc_id}/ingest (the filesystem-backed demo-doc register
+    in documents.py) so both entry points run the identical real pipeline."""
     content = await file.read()
-    try:
-        text = ingest.extract_text(file.filename or "upload", content)
-    except ingest.UnsupportedFileType as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    if not text.strip():
-        raise HTTPException(
-            status_code=422,
-            detail="No extractable text found in this file (scanned/image-only PDFs are "
-            "not supported by this text-first pipeline).",
-        )
-
-    # PERCEIVE: LLM-first extraction behind a span-verification gate when enabled
-    # (app/llm_extract.py), else pure regex. Either way, DECIDE stays in checks.py.
-    found, abstained = await llm_extract.extract_params(text)
-    param_dicts = ingest.to_param_dicts(found)
-    document_id = ingest.register_upload(file.filename or "upload", param_dicts, abstained)
-
-    return {
-        "document_id": document_id,
-        "title": file.filename,
-        "extracted": [
-            {
-                "param": p["param"],
-                "element": p["element"],
-                "value": p["value"],
-                "unit": p["unit"],
-                "source_quote": p["source_quote"],
-            }
-            for p in param_dicts
-        ],
-        "abstained": [{"param": a.param, "reason": a.reason} for a in abstained],
-        "checkable_params": len(param_dicts),
-    }
+    return await ingest_pipeline.run_ingest_pipeline(file.filename or "upload", content)
 
 
-def _reasoning_trace(document_id: str) -> list[str]:
-    """Human-readable agent trace for the live SSE panel."""
-    params = _params_for(document_id)
+def _reasoning_trace(
+    document_id: str, result: ComplianceResult, param_by_ncr: dict[str, dict]
+) -> list[str]:
+    """Human-readable agent trace for the live SSE panel.
+
+    Every line here narrates a fact actually observed or computed during THIS
+    `evaluate_with_params()` run (`result`/`param_by_ncr`, computed by the caller
+    BEFORE this function runs) — never a canned script. A previous version of
+    this function emitted a fixed narration (including "Extracting parameters
+    from the document…", which was false for the pre-structured demo docs) with
+    no connection to what actually happened. Anything not genuinely observable
+    from the real upload/evaluation data (e.g. a raw character count — never
+    persisted anywhere in the ingest pipeline) is simply omitted, per the rule
+    that a placeholder number is worse than no line at all."""
     upload = ingest.get_upload(document_id)
-    lines = [
-        "Extracting parameters from the document…",
-        f"Found {len(params)} checkable parameter(s).",
-    ]
-    if upload and upload.get("abstained"):
+    params = _params_for(document_id)
+    lines: list[str] = []
+
+    if upload:
         lines.append(
-            f"Abstained on {len(upload['abstained'])} parameter type(s) — no confident match "
-            "in the uploaded text (see abstained list)."
+            f'Loaded {len(params)} checkable parameter(s), span-verified from "{upload["title"]}".'
         )
-    for param in params:
-        p = param.get("param", "")
-        if p == "importance_factor":
-            lines.append("Reviewing seismic Importance Factor against IS 1893 Table 8…")
-        elif p == "nominal_cover":
-            lines.append(f"Checking {param.get('element_type')} cover against IS 456…")
-        elif p == "wc_ratio":
-            lines.append("Checking free water-cement ratio against IS 456 Table 5…")
-        elif p == "design_wind_speed":
-            lines.append("Checking design wind speed against IS 875 Pt3…")
-        elif p == "concrete_grade":
-            lines.append("Checking marine concrete grade against IS 456 8.2.8…")
-        elif p == "long_steel_pct":
-            lines.append("Checking column steel percentage against IS 456 26.5.3.1…")
-        elif p == "tie_spacing":
-            lines.append("Checking lateral-tie pitch against IS 456 26.5.3.2…")
-        elif p == "design_wind_pressure":
-            lines.append("Checking design wind pressure pz against IS 875 Pt3 5.4…")
+        if upload.get("abstained"):
+            lines.append(
+                f"Abstained on {len(upload['abstained'])} parameter type(s) — no confident "
+                "verbatim match in the uploaded text."
+            )
+    else:
+        lines.append(f"Loaded {len(params)} pre-structured parameter(s) for {document_id}.")
+
+    if config.RETRIEVAL_ENABLED:
+        try:
+            from ..retrieval import filesystem_corpora
+            from ..retrieval.index import get_corpus
+
+            filesystem_corpora.ensure_filesystem_corpora()
+            corpus = get_corpus(filesystem_corpora.STRUCTURAL_CORPUS_NAME)
+        except Exception:
+            corpus = None
+        if corpus and corpus.chunk_count:
+            backend_name = (
+                "Actian VectorAI DB"
+                if config.RETRIEVAL_VECTOR_STORE == "actian"
+                else "the local hybrid vector index"
+            )
+            lines.append(
+                f"Searching {backend_name} — {corpus.chunk_count} vectors, "
+                f"corpus {filesystem_corpora.STRUCTURAL_CORPUS_NAME}"
+            )
+
+    for ncr in result.ncrs:
+        citation = ncr.citation
+        retrieval = citation.retrieval if citation else None
+        if retrieval and retrieval.resolved_via == "vector_index" and citation:
+            lines.append(f'  query "{retrieval.query}"')
+            lines.append(
+                f"  → {citation.standard} Cl. {citation.clause} · rank {retrieval.rank} "
+                f"· score {retrieval.score:.3f}"
+            )
+        elif retrieval and retrieval.resolved_via == "local_cache" and citation:
+            # Use the resolver's own real reason (disabled / no accepted hit /
+            # error) rather than a single generic line — "didn't surface a
+            # match" would be false when retrieval was never attempted at all.
+            reason = retrieval.note or "citing the locally cached clause instead"
+            lines.append(f"  {reason[0].upper()}{reason[1:]}: {citation.standard} Cl. {citation.clause}")
+
+        p = param_by_ncr.get(ncr.id)
+        if p is not None:
+            val = f"{p.get('value')} {p.get('unit', '')}".strip()
+            lines.append(
+                f"  Computing verdict in Python: {str(p.get('param', '')).replace('_', ' ')} "
+                f"= {val} → {ncr.severity}"
+            )
+
+    if result.conforming:
+        lines.append(f"{len(result.conforming)} parameter(s) conformed — no NCR raised.")
+
     return lines
 
 
 async def _sse_stream(document_id: str) -> AsyncGenerator[bytes, None]:
-    for line in _reasoning_trace(document_id):
+    # Compute the real result FIRST so the trace below narrates what actually
+    # happened (real retrieval ranks/scores, real computed verdicts) instead of
+    # a canned script written before evaluation ran.
+    result, param_by_ncr = evaluate_with_params(document_id)
+    for line in _reasoning_trace(document_id, result, param_by_ncr):
         yield f"data: {json.dumps({'type': 'reasoning', 'text': line})}\n\n".encode()
-    result = evaluate(document_id)
     await run_in_threadpool(_record_upload_audit, document_id, result)
     n = len(result.ncrs)
     yield (

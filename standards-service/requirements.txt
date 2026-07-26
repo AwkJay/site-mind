@@ -41,3 +41,4 @@ starlette==0.38.6
 #   uv pip install actian-vectorai-client
 #
 # actian-vectorai-client==1.0.2
+sentence-transformers

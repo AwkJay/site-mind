@@ -36,6 +36,7 @@ import type {
   Confidence,
   CostRisk,
   DocItem,
+  FloorPlanResult,
   GanttBar,
   IngestResult,
   KgGraph,
@@ -379,6 +380,64 @@ export async function ingestDocument(file: File): Promise<IngestResult> {
     throw new Error(detail?.detail ?? `Upload failed (HTTP ${res.status})`);
   }
   return (await res.json()) as IngestResult;
+}
+
+// ── Filesystem-backed register documents ────────────────────────────────────
+// Reads the REAL file behind a document-register row (backend/data/project_docs/
+// demo_docs/) and runs it through the identical ingest pipeline as ingestDocument
+// above. Same honesty rule: no mock fallback — a register row with has_file:true
+// promises a real file, so a check must run against real extracted bytes or
+// fail loudly, never fall back to a synthetic result.
+export async function ingestRegisteredDocument(docId: string): Promise<IngestResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/documents/${encodeURIComponent(docId)}/ingest`, {
+      method: "POST",
+    });
+  } catch {
+    throw new IngestUnavailableError(
+      "Backend unreachable — running the real pipeline needs the live SiteMind API " +
+        "(it reads the actual file on disk), so there is no offline/mock fallback for this action.",
+    );
+  }
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail ?? `Ingest failed (HTTP ${res.status})`);
+  }
+  return (await res.json()) as IngestResult;
+}
+
+// ── Spatial Compliance (floor plan) ─────────────────────────────────────────
+// Deliberately NO mock fallback — same honesty rule as ingestDocument/
+// ingestCommissioningLog: this reads the actual uploaded file's real geometry
+// and real findings. If the backend is unreachable there is nothing honest to
+// fabricate, so callers must surface the failure rather than render a fake map.
+export class FloorPlanUnavailableError extends Error {}
+
+export async function postFloorPlan(file: File): Promise<FloorPlanResult> {
+  const form = new FormData();
+  form.append("file", file);
+  let res: Response;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    res = await fetch(`${API_URL}/api/compliance/floor-plan`, {
+      method: "POST",
+      body: form,
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+  } catch {
+    throw new FloorPlanUnavailableError(
+      "Backend unreachable — floor-plan extraction needs the live SiteMind API (it reads " +
+        "the actual file), so there is no offline/mock fallback for this action.",
+    );
+  }
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail ?? `Floor-plan check failed (HTTP ${res.status})`);
+  }
+  return (await res.json()) as FloorPlanResult;
 }
 
 // ── Commissioning QA (Pillar 5, cooling-only slice) ─────────────────────────

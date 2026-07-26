@@ -144,3 +144,53 @@ reason not to demo; every item below has a known, disclosed workaround.
     returned misleading exit codes and should be split into separate, individually-verified steps
     rather than trusted as one atomic block, especially for anything destructive-ish. Applied for
     the rest of this session; worth keeping in mind for future sessions too.
+
+## Spatial Compliance (added 2026-07-25 — see `docs/superpowers/specs/2026-07-25-spatial-compliance-design.md`)
+
+21. **The regex extractor (`backend/app/spatial/extract.py`) is brittle on unseen phrasing.** It
+    matches 3 anticipated phrasings per field (room dimensions, clearances, dead-end/travel
+    distance, exit width, room-to-room adjacency) — a document that words any of these differently
+    will simply not extract that value (an honest miss, never a fabricated one: nothing is ever
+    guessed past what a regex + the span-verification gate actually found). The optional LLM
+    enhancement path (`extract_spatial_enhanced`, gated on `SPATIAL_LLM_EXTRACTION_ENABLED`,
+    default `0`) is the intended fix for coverage past anticipated wording, but it is a stub in this
+    slice (see the spec's §5.2 and §9) — turning the flag on today still just calls the same regex
+    path. This is documented as a known limitation, not silently worked around.
+22. **No freely redistributable governing clause exists for rack/aisle geometry.** Cold-aisle/
+    hot-aisle containment and row spacing inside a data hall are governed by ASHRAE TC 9.9, which is
+    a paywalled standard SiteMind cannot digitise verbatim (the same reason Commissioning QA's
+    electrical/fire slice is deferred — see item 19 above). The server-hall zone is rendered on the
+    floor map for spatial context (`not_checked_zones` in the API response) but is deliberately
+    never judged, rather than inventing a threshold against a standard that can't be cited. See
+    spec §9 "Out of scope."
+23. **The NBC 2016 Part 4 PDF (`standards/NBC2016-Part-IV.pdf`) is a BIS-licensed copy watermarked
+    to a third party and must not be redistributed.** `standards/*.pdf` is gitignored. Only short,
+    verbatim clause quotations (`backend/data/standards/spatial_clauses.json`) and the two lookup
+    tables (`nbc_tables.json`) are committed — same practice as the existing 24 clauses in
+    `clauses.json`. Anyone re-deriving these numbers from scratch needs their own licensed copy of
+    the PDF; it is not shipped in this repo.
+24. **`Room.occupancy_group` has no extraction path anywhere in `spatial/extract.py`.** The demo
+    document (Note 10) explicitly defers occupant-load and occupancy-classification figures to the
+    fire consultant — the regex extractor never guesses one, so `EGRESS_EXIT_WIDTH` can only ever
+    reach `ABSTAIN` through the live extractor today, never a real PASS/FAIL. `eval/
+    run_spatial_eval.py`'s boundary cases for that check supply `occupancy_group`/`occupant_load`
+    directly (disclosed in the eval's own `limitation` field) specifically to still exercise the
+    threshold arithmetic — this is a known, stated gap in extraction coverage, not a hidden one.
+25. **NBC Table 5's "Industrial" occupancy has no single travel-distance figure** — the real table
+    splits it into G-1/G-2 vs G-3 construction sub-groups that the extractor has no way to
+    distinguish from free text, so a stated `occupancy_group: "industrial"` still abstains on
+    `EGRESS_TRAVEL_DISTANCE` rather than guessing a sub-group. This is what the underlying NBC table
+    itself says, not an extraction shortfall — see `nbc_tables.json`'s own `_note` field.
+26. **The duplicate exit-width abstention bug (found and fixed 2026-07-25).** The floor-plan
+    endpoint reported the same underlying missing-occupant-load fact twice — once as a
+    document-level abstention from `spatial/extract.py` ("exit width adequacy"), once as a
+    per-item abstention from `checks_spatial.py`'s `EGRESS_EXIT_WIDTH` ("exit width at &lt;room&gt;
+    (check EGRESS_EXIT_WIDTH)"). Fixed by de-duplicating at the endpoint layer
+    (`agents/floor_plan.py::_dedupe_abstentions`), keeping the more specific check-stage wording;
+    `extract.py`'s own always-abstain behaviour (and its direct unit test,
+    `test_spatial_extract.py::test_exit_width_triggers_occupant_load_abstention`) is left
+    unchanged, since the dedup only affects what the endpoint actually shows the user. Regression
+    test: `tests/test_spatial_api.py::test_exit_width_abstention_is_not_duplicated`. This
+    deduplication is currently keyed to this one known case (`_SUPERSEDED_BY_CHECK` is a small
+    lookup table, not a general "detect any semantic duplicate" mechanism) — a future check that
+    introduces a similar two-stage abstention would need its own entry there.

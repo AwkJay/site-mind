@@ -1,0 +1,65 @@
+{
+  "_note": "Spatial-domain clauses digitised VERBATIM for the Spatial Compliance feature (docs/superpowers/specs/2026-07-25-spatial-compliance-design.md §4). Kept in a separate file from clauses.json so the existing 24 clauses and their evals stay byte-identical. Source PDFs: backend/data/project_docs/CEA_Safetycons.pdf (Regulation 37(iii)(a)(b)(c), pdfplumber page index 22) and standards/NBC2016-Part-IV.pdf (clause 4.4.2.2 on page index 29, clause 4.4.2.3 on page index 30). Only whitespace/line-wrap was normalised and the BIS 'Supplied by Book Supply Bureau...' watermark noise was stripped; no wording was changed, paraphrased, or summarised. Where a clause spans multiple lettered sub-paragraphs whose text was joined into one field, the join is a straight concatenation of the verbatim sub-paragraphs with a single space, in original order.",
+  "clauses": [
+    {
+      "key": "CEA_2010_37iii_a",
+      "standard": "CEA (Measures Relating to Safety and Electric Supply) Regulations, 2010",
+      "title": "Clear Space in Front of Switchboard",
+      "clause": "37(iii)(a)",
+      "text": "Every switchboard shall comply with the following,- (a) a clear space of not less than one metre in width shall be provided in front of the switchboard;",
+      "verify_url": "https://cea.nic.in/regulations-category/measures-relating-to-safety-and-electric-supply/?lang=en",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    },
+    {
+      "key": "CEA_2010_37iii_b",
+      "standard": "CEA (Measures Relating to Safety and Electric Supply) Regulations, 2010",
+      "title": "Clearance Behind Switchboard Where Attachments or Bare Connections Exist",
+      "clause": "37(iii)(b)",
+      "text": "(b) if there are any attachments or bare connections at the back of the switchboard, the space, if any, behind the switchboard shall be either less than twenty centimetres or more than seventy five centimetres in width, measured from the farthest protruding part of any attachment or conductor;",
+      "verify_url": "https://cea.nic.in/regulations-category/measures-relating-to-safety-and-electric-supply/?lang=en",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    },
+    {
+      "key": "CEA_2010_37iii_c",
+      "standard": "CEA (Measures Relating to Safety and Electric Supply) Regulations, 2010",
+      "title": "Passage Way Behind Switchboard When Rear Space Exceeds 75 cm",
+      "clause": "37(iii)(c)",
+      "text": "(c) if the space behind the switchboard exceeds seventy five centimetres in width, there shall be a passage way from either end of the switchboard, clear to a height of 1.8 metres.",
+      "verify_url": "https://cea.nic.in/regulations-category/measures-relating-to-safety-and-electric-supply/?lang=en",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    },
+    {
+      "key": "NBC2016_4.4.2.2a",
+      "standard": "National Building Code of India 2016, Part 4",
+      "title": "Travel Distance Shall Not Exceed Table 5",
+      "clause": "4.4.2.2(a)",
+      "text": "Exits shall be so located that the travel distance on the floor shall not exceed the distance given in Table 5.",
+      "verify_url": "https://www.bis.gov.in/standards/technical-department/national-building-code/",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    },
+    {
+      "key": "NBC2016_4.4.2.2c",
+      "standard": "National Building Code of India 2016, Part 4",
+      "title": "Dead-End Corridor Length Limit",
+      "clause": "4.4.2.2(c)",
+      "text": "The dead end corridor length in exit access shall not exceed 6 m for educational, institutional and assembly occupancies. For other occupancies, the same shall be 15 m (see Fig. 6)",
+      "verify_url": "https://www.bis.gov.in/standards/technical-department/national-building-code/",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    },
+    {
+      "key": "NBC2016_4.4.2.3",
+      "standard": "National Building Code of India 2016, Part 4",
+      "title": "Capacities of Means of Egress (Exit Width From Occupant Load and Table 4)",
+      "clause": "4.4.2.3",
+      "text": "Exit capacity is the number of people that can pass through a stairway, and level components (door and corridor) and ramps. The total capacity of all the respective means of egress serving a floor shall be sufficient to allow egress of the entire population of the floor. The unit of exit width, used to measure the capacity of any exit, shall be 500 mm. A clear width of 250 mm shall be counted as an additional half unit. Clear widths less than 250 mm shall not be counted for exit width. Width per person for stairways, and level components and ramps shall be determined using the capacity factors in accordance with Table 4.",
+      "verify_url": "https://www.bis.gov.in/standards/technical-department/national-building-code/",
+      "domain": "spatial",
+      "source_type": "primary_native_pdf"
+    }
+  ]
+}

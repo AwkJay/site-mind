@@ -4,11 +4,28 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 
+class ClauseRetrievalProvenance(BaseModel):
+    """How THIS citation's clause was located (clause_resolver.py). Optional and
+    additive — every existing Citation producer (commissioning, supply chain,
+    the old get_clause() path) simply omits it and behaves exactly as before.
+    Only the Compliance pillar's clause_resolver sets this."""
+    resolved_via: Literal["vector_index", "local_cache"]
+    rank: Optional[int] = None          # 1-based rank in the retrieved list (vector_index only)
+    score: Optional[float] = None       # dense cosine similarity of the accepted hit (vector_index only)
+    query: Optional[str] = None         # the rule_text (or query string) actually searched
+    chunk_source: Optional[str] = None  # e.g. "is456_2000/is.456.2000.md" (vector_index only)
+    vectors_searched: Optional[int] = None  # corpus.chunk_count at query time
+    note: Optional[str] = None          # set on local_cache: why the index didn't surface it
+
+
 class Citation(BaseModel):
     standard: str            # e.g. "IS 456:2000"
     clause: str              # e.g. "26.4.2.2"
     text: str                # exact clause text (from clauses.json / the Codebook standards service)
     verify_url: str          # link to the real source clause
+    # Set only by clause_resolver.py (Compliance pillar). None everywhere else —
+    # never required, never assumed present by any existing consumer/eval/fixture.
+    retrieval: Optional[ClauseRetrievalProvenance] = None
     # "codebook_verified": fetched verbatim via Codebook's digitised-standards index (IS/IRC/IRS
     # corpus) — the default and the project's normal integrity bar. "cross_source_unverified": NOT
     # fetched from a single verified primary document — compiled from convergent public
@@ -66,7 +83,7 @@ class NCR(BaseModel):
     confirm_with: Optional[str] = None        # for ADVISORY, e.g. "EOR"
     governing_note: Optional[str] = None      # set when >1 clause governs this parameter
     status: Literal["OPEN", "CLOSED", "REVIEW_REQUIRED"] = "OPEN"
-    domain: Literal["structural", "electrical", "mechanical"] = "structural"  # from Check.domain (checks.py); commissioning.py sets "mechanical" explicitly
+    domain: Literal["structural", "electrical", "mechanical", "spatial"] = "structural"  # from Check.domain (checks.py / checks_spatial.py); commissioning.py sets "mechanical" explicitly
     # Tiered-verdict provenance (plan §B2): "certified" = checks.py hand-vetted rule
     # (unchanged, default); "computed_draft" = no pre-vetted rule, so an LLM read a rule
     # out of the retrieved clause and rule_eval.evaluate() computed it — an engineer must
@@ -77,6 +94,11 @@ class NCR(BaseModel):
     # >= 25.0 MPa -> FAIL") — shown verbatim in the UI's "Computation half" so the
     # displayed math is never a frontend re-derivation, just what Python computed.
     computed_detail: Optional[str] = None
+    # Spatial-compliance only (spec §5.6): {"kind": "room"|"equipment"|"exit"|"path",
+    # "id": "..."} so the floor-map UI can pin this finding onto its geometry.
+    # None for every non-spatial NCR — this never changes the existing scalar
+    # compliance path's shape.
+    geometry_ref: Optional[dict] = None
 
 
 class OverlapNote(BaseModel):

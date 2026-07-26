@@ -82,7 +82,7 @@ agent-orchestration framework — the guarantee layer is plain, auditable Python
 ## What's real vs representative
 
 - **Real:** every IS/CEA clause and the text it resolves to, the compliance decision logic, all
-  21 eval scripts, document parsing (with mandatory abstention on anything it can't confidently
+  22 eval scripts, document parsing (with mandatory abstention on anything it can't confidently
   extract), and the critical-path schedule recomputation.
 - **Representative:** the pre-loaded project documents and schedule are synthetic, modelled on
   public Indian data-centre tenders. The standards and the logic that checks them are real — and
@@ -126,13 +126,11 @@ cd frontend && npm run dev                                      # :3000
 ### 3 · Add LLM prose (optional)
 
 An LLM writes the findings and answers when a key is set; with no key everything falls back to
-deterministic templates. **Gemini is the default provider** — if `GEMINI_API_KEY` is set and
-`LLM_PROVIDER` is left unset, it's picked up automatically. Anthropic, OpenAI, and Codex (local
-`codex login`, no key needed) also work — see `backend/.env.example` for the full list.
+deterministic templates. Set your API keys in `backend/.env` (see `backend/.env.example` for all options):
 
 ```env
-GEMINI_API_KEY=your-key-from-aistudio.google.com
-GEMINI_MODEL=gemini-flash-latest
+IAMHC_API_KEY=sk-your-iamhc-key
+IAMHC_BASE_URL=https://api.iamhc.cn/v1
 ```
 
 Keys only affect prose and semantic search — **never a verdict**.
@@ -168,7 +166,7 @@ note or text in Hindi/English/a regional language, it replies with cited text + 
 (ElevenLabs STT/TTS, Gemini translation), and caches repeat questions so they don't re-spend quota.
 
 ```bash
-cd telegram-bot && cp .env.example .env   # fill in TELEGRAM_BOT_TOKEN, ELEVENLABS_API_KEY, GEMINI_API_KEY
+cd telegram-bot && cp .env.example .env   # fill in TELEGRAM_BOT_TOKEN, ELEVENLABS_API_KEY, IAMHC_API_KEY
 ./run.sh
 ```
 
@@ -177,6 +175,14 @@ cd telegram-bot && cp .env.example .env   # fill in TELEGRAM_BOT_TOKEN, ELEVENLA
 - **Compliance Agent** (`/compliance`) — upload a DBR/submittal, get NCRs with a cited clause, the
   exact source span, and a confidence-scored action brief. Click any citation to open an in-app
   clause viewer — the real source document's own text, read straight off disk, not an external link.
+- **Spatial Compliance** (`/compliance` "Floor Plan" panel) — upload a layout narrative, get a
+  deterministic 2D floor map with NCRs pinned onto the geometry that failed (CEA switchboard
+  clearances, NBC dead-end/travel-distance/exit-width egress rules). A room's dimensions and
+  position are only ever drawn as fact when the document actually states them — an unstated room
+  renders hatched, and a check never reads an inferred value. Reproduce it with the bundled demo
+  file: `backend/data/project_docs/live_upload_samples/DC1-05-DBR-0007-R1_Layout-Design-Basis.md`
+  → `POST /api/compliance/floor-plan`. Rack/aisle geometry is rendered for context but deliberately
+  never judged (no freely redistributable governing clause — see `docs/gaps.md`).
 - **Project Copilot** (`/copilot`) — cross-document Q&A with citations; guardrailed hybrid
   retrieval (BM25 + dense, reciprocal-rank fused); abstains below a floor instead of guessing.
 - **Schedule Risk** (`/schedule`) — CPM + leading-indicator rules (procurement, weather,
@@ -216,11 +222,17 @@ without it. See `hexafalls_plan.md` §9 for the full env var table.
 
 ## Evals
 
-21 re-runnable eval scripts (18 in `backend/eval/`, 3 in the Codebook service), each reported on
+22 re-runnable eval scripts (19 in `backend/eval/`, 3 in the Codebook service), each reported on
 its own — never blended into a single vanity score.
 
 ```bash
 cd backend && source .venv/bin/activate && python -m eval.run_eval
+```
+
+Spatial Compliance's checks are evaluated separately (never blended into the number above):
+
+```bash
+cd backend && source .venv/bin/activate && python -m eval.run_spatial_eval   # -> eval/spatial_report.json
 ```
 
 ## Known caveats (disclosed, not hidden)

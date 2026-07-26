@@ -31,7 +31,64 @@ IS clause, emits NCRs + a senior ADVISORY.
 - Decision logic is deterministic Python (`app/agents/checks.py`) against real clauses; LLM only
   writes prose and is handed the clause to cite.
 
-## 3. Project/RFI Copilot (`/copilot`, `backend/app/agents/copilot.py`)
+## 3. Spatial Compliance (`/compliance` — "Floor Plan" panel, `backend/app/agents/floor_plan.py`)
+A second capability inside the Compliance pillar (spec:
+`docs/superpowers/specs/2026-07-25-spatial-compliance-design.md`), not a new page. Reads room
+sizes, equipment clearances, exits, and egress facts out of a Design Basis / layout narrative,
+computes pass/fail in deterministic Python against real CEA/NBC clauses, and renders a 2D floor
+map with NCRs pinned onto the geometry that failed. The existing scalar Compliance path
+(`ingest.py` → `checks.py`) is untouched.
+- Upload the same file types as `/api/compliance/ingest` (`.pdf .docx .txt .md`). Demo document:
+  `backend/data/project_docs/live_upload_samples/DC1-05-DBR-0007-R1_Layout-Design-Basis.md` — a
+  synthetic-but-representative Chennai 48 MW Tier-III layout narrative that parses fully via regex,
+  no API key, and deterministically produces 2 NCRs, 1 PASS, 2 abstentions, and a server-hall zone
+  flagged `not_checked`.
+- Frontend: `frontend/components/FloorMap.tsx` (inline SVG, no new npm dependency) + a "Floor Plan"
+  panel in `frontend/app/compliance/page.tsx`, rendered only when `has_spatial_data` is true.
+- Backend: `POST /api/compliance/floor-plan` — PERCEIVE (`app/spatial/extract.py`, regex-first,
+  reuses `ingest.py`'s sentence splitter and `llm_extract.py`'s span-verification gate) → LAYOUT
+  (`app/spatial/layout.py`, deterministic shelf packing — same spec in, byte-identical geometry out,
+  every time) → DECIDE (`app/agents/checks_spatial.py`, deterministic Python thresholds) → respond.
+  Never raises on a document with no spatial content — returns `has_spatial_data: false` with a
+  plain-language `reason`.
+- **The stated-vs-inferred rule (the honesty mechanic):** a room's dimensions are only ever
+  `"stated"` (an unstated room isn't drawn to scale — a hatched, dimmed nominal 6×6 m placeholder
+  instead). A room's position is `"stated"` only when the document gives an explicit room-to-room
+  relation the layout engine consumed ("the LV Switchroom sits immediately to the west of Data Hall
+  1"); otherwise it's placed by deterministic shelf-packing and marked `"inferred"`. **A check may
+  only read a value whose provenance is `"stated"` — never an inferred one.**
+- **The 6 checks**, each a Python threshold function anchored to a verbatim-digitised clause
+  (`backend/data/standards/spatial_clauses.json` — separate file from `clauses.json` so the existing
+  24 clauses and their evals stay byte-identical):
+  | check | rule | clause |
+  |---|---|---|
+  | `SWBD_FRONT_CLEARANCE` | front clearance ≥ 1.0 m | CEA 37(iii)(a) |
+  | `SWBD_REAR_CLEARANCE` | rear space < 0.20 m or > 0.75 m | CEA 37(iii)(b) |
+  | `SWBD_REAR_PASSAGE` | rear passage ≥ 1.8 m (only when rear space > 0.75 m) | CEA 37(iii)(c) |
+  | `EGRESS_DEAD_END` | dead-end corridor ≤ 6 m (educ./inst./assembly) or ≤ 15 m (other) | NBC 2016 4.4.2.2(c) |
+  | `EGRESS_TRAVEL_DISTANCE` | travel distance ≤ NBC Table 5 limit for the occupancy | NBC 2016 4.4.2.2(a) |
+  | `EGRESS_EXIT_WIDTH` | exit width ≥ occupant load × NBC Table 4 mm/person | NBC 2016 4.4.2.3 |
+
+  Every check abstains (never fails) when a required companion value is missing or its provenance
+  isn't `"stated"`. Two checks (`EGRESS_DEAD_END`, `EGRESS_TRAVEL_DISTANCE`) implement a
+  determinate-regardless-of-group shortcut: `Room.occupancy_group` has no extraction path in this
+  build (the demo doc never states one, and guessing it is forbidden), so when a measured value
+  breaches even NBC's most permissive limit for any occupancy the verdict is FAIL regardless of
+  group, and when it satisfies even the strictest limit the verdict is PASS regardless — abstention
+  is reserved for the genuinely ambiguous band in between.
+- **Rule tier:** all 6 rules are "certified" tier (`checks_spatial.py`) — hand-written Python
+  thresholds, same as `checks.py`. There is no "computed-draft" spatial tier in this slice.
+- **Deliberately NOT checked:** rack/aisle geometry inside the server hall (cold-aisle/hot-aisle
+  containment, row spacing) is governed by ASHRAE TC 9.9, which is **not a freely redistributable
+  standard** and is not digitised here — the zone is rendered on the floor map for spatial context
+  (`not_checked_zones` in the API response, shown as a visible caption, not hidden in a tooltip) but
+  never judged, because inventing a threshold against a standard SiteMind can't cite verbatim would
+  break the "never invent a clause" rule. See `docs/gaps.md`.
+- Eval: `backend/eval/run_spatial_eval.py` — decision accuracy, citation-hallucination rate, and
+  abstention correctness across boundary cases for all 6 checks, reported on its own, never blended
+  into `run_eval.py`'s or `run_electrical_eval.py`'s numbers.
+
+## 4. Project/RFI Copilot (`/copilot`, `backend/app/agents/copilot.py`)
 Cited hybrid-RAG Q&A over project docs/standards, plus "seen-before RFI" detection.
 - Chat thread, hoverable `[n]` citation chips, per-answer sources list.
 - "Seen before" card when a semantically similar resolved RFI is found.
@@ -59,7 +116,7 @@ Cited hybrid-RAG Q&A over project docs/standards, plus "seen-before RFI" detecti
   default (switching it to `/chat` with a persisted `thread_id` is noted as a future frontend
   enhancement, not yet wired up).
 
-## 4. Schedule & Risk (`/schedule`, `backend/app/schedule.py`)
+## 5. Schedule & Risk (`/schedule`, `backend/app/schedule.py`)
 CPM + leading-indicator rules (not fabricated-data ML), weather/workforce risk factors.
 - WBS gantt (baseline vs. predicted-slip overlay, "today" line, hover tooltips) — read-only.
 - "Biggest early warning this cycle" hero card.
@@ -69,7 +126,7 @@ CPM + leading-indicator rules (not fabricated-data ML), weather/workforce risk f
   slipping vendor, progress lag, legacy monsoon proxy, cited IMD monsoon window, cited Pongal
   workforce window), `/methodology` (discloses how each risk input is grounded).
 
-## 5. Project Timeline (`/timeline`, `backend/app/timeline.py`)
+## 6. Project Timeline (`/timeline`, `backend/app/timeline.py`)
 Cross-pillar chronological aggregation — explicitly "aggregation only, no new judgment" (banner
 shown in-page).
 - 5-lane chart (compliance, copilot, schedule, supply_chain, commissioning), day axis, phase
@@ -78,7 +135,7 @@ shown in-page).
   shared-key matches) + detail card + "open in {pillar}" link.
 - Backend: `GET /api/timeline` — pure aggregation of the other 4 pillars' own outputs.
 
-## 6. Supply Chain Visibility & Risk (`/supply-chain`, `backend/app/supply_chain.py`)
+## 7. Supply Chain Visibility & Risk (`/supply-chain`, `backend/app/supply_chain.py`)
 Multi-tier shipment tracking extending schedule's procurement fields. Read-only page.
 - As-of-day/date disclosure banner.
 - In-app timestamped alerts panel (severity-tiered by days-at-risk/critical-path).
@@ -91,7 +148,7 @@ Multi-tier shipment tracking extending schedule's procurement fields. Read-only 
   `/equipment-spec-ncrs`, `/map`. Delay propagation, root-cause attribution, and alternative
   viability are all computed, not asserted.
 
-## 7. Commissioning QA Copilot (`/commissioning`, `backend/app/commissioning.py`)
+## 8. Commissioning QA Copilot (`/commissioning`, `backend/app/commissioning.py`)
 Cooling-only slice (electrical/fire deferred — see project instructions, corpus gap).
 - Upload a real CSV cooling test log (click-to-browse).
 - Persistent corpus-limitation disclosure (ASHRAE TC9.9 envelope is cross-source compiled, not
@@ -102,7 +159,7 @@ Cooling-only slice (electrical/fire deferred — see project instructions, corpu
   NCR MEDIUM / FAIL→NCR HIGH / NOT_CHECKABLE, never crashes on a bad row), `GET
   /quality-package/{run_id}` (JSON), `/quality-package/{run_id}/html` (standalone report).
 
-## 8. Codebook (`/codebook`, `standards-service` via MCP)
+## 9. Codebook (`/codebook`, `standards-service` via MCP)
 SiteMind's backend as an MCP *client* of Codebook (standards-service, port 8010) — browser never
 talks to Codebook directly.
 - Availability gating (checking/disabled/unreachable, explained in-page).
@@ -116,7 +173,7 @@ talks to Codebook directly.
   `get_clause`, `check_document_against_corpus`), all return prose text blocks by design (MCP has
   no structured_output in the pinned SDK version).
 
-## 9. Codebook Console (`/codebook/console`, new 2026-07-12)
+## 10. Codebook Console (`/codebook/console`, new 2026-07-12)
 Admin/browsing UI on Codebook's plain REST retrieval API (structured JSON, not MCP prose) — built
 after establishing Codebook was already a separate service and already renamed (no new service,
 no new brand needed; see `docs/codebook_console.md`).
@@ -128,7 +185,7 @@ no new brand needed; see `docs/codebook_console.md`).
 - Backend: `GET /console/corpora`, `/console/corpora/{name}/documents`, `POST /console/upload` —
   `httpx`-based REST proxy (bypasses MCP entirely) to standards-service's own `/api/retrieval/*`.
 
-## 10. Knowledge Base (`/knowledge-base`, `backend/app/retrieval/` — flag-gated)
+## 11. Knowledge Base (`/knowledge-base`, `backend/app/retrieval/` — flag-gated)
 Independent standalone retrieval package (`RETRIEVAL_ENABLED`, default off) — predates Codebook,
 still live because 2 eval scripts (`run_retrieval_eval.py`, `run_cross_corpus_eval.py`) import it
 directly. Upload arbitrary docs into a searchable corpus, ask cited questions.
@@ -138,7 +195,7 @@ directly. Upload arbitrary docs into a searchable corpus, ask cited questions.
   quoted text; explicit abstention message when nothing clears the retrieval floor.
 - Backend: `GET /corpora`, `POST /upload`, `POST /query`.
 
-## 11. Knowledge Graph (`/graph`, `backend/app/kg.py`)
+## 12. Knowledge Graph (`/graph`, `backend/app/kg.py`)
 Equipment → spec → standard → RFI connections from real structured data (NetworkX, no LLM/embeddings).
 - SVG subgraph, 4 columns (Equipment/Spec/Standard/RFI), curved labeled edges.
 - Click a node → highlight its neighborhood, dim the rest; inspector side panel; "how this is
@@ -146,7 +203,7 @@ Equipment → spec → standard → RFI connections from real structured data (N
 - Backend: `GET /api/kg/{element_id}` — builds an in-memory graph from `applicable_checks()` and
   shared-ID RFI references, returns the requested node's neighborhood (or whole graph on no match).
 
-## 12. Audit Ledger (`/audit`, `backend/app/audit.py` + `audit_api.py` — HexaFalls plan §D/E)
+## 13. Audit Ledger (`/audit`, `backend/app/audit.py` + `audit_api.py` — HexaFalls plan §D/E)
 Every finalized compliance decision recorded once, append-only, via a content hash computed over
 its non-prose fields (severity/citation/values — AI-written prose is excluded from the hash on
 purpose, since it legitimately reword itself between live LLM calls even at temperature 0).
@@ -166,7 +223,7 @@ purpose, since it legitimately reword itself between live LLM calls even at temp
   SiteMind's own database. `SOLANA_ENABLED=0` (the default) → rows show "Solana disabled," ledger
   still works fully without it.
 
-## 13. Telegram field bot (`telegram-bot/`, standalone service — HexaFalls plan §F1)
+## 14. Telegram field bot (`telegram-bot/`, standalone service — HexaFalls plan §F1)
 A multilingual voice front end for the existing Copilot, reachable from a phone. Not a new backend
 route — a pure client of `POST /api/copilot/ask`.
 - Text or voice-note input, any of Hindi/English/regional language.
@@ -182,12 +239,13 @@ route — a pure client of `POST /api/copilot/ask`.
 
 ---
 
-## 14. Automated eval suite (script count not re-verified this pass — see PROGRESS.md)
+## 15. Automated eval suite (script count not re-verified this pass — see PROGRESS.md)
 Every pillar's correctness claim is a *computed* number from a re-runnable script, not an assertion
 (project rule — see `PROGRESS.md` for current pass counts). Run via `python -m eval.run_X_eval`;
-each writes a JSON report (`n_cases`, `n_pass`, `accuracy`/precision-recall-F1, `cases`). 18 live in
-`backend/eval/`, 3 in `standards-service/eval/` (2 of which are near-duplicates of a backend
-script, repointed — see caveats). None are blended into one score; each pillar reports separately.
+each writes a JSON report (`n_cases`, `n_pass`, `accuracy`/precision-recall-F1, `cases`). 19 live in
+`backend/eval/` (18 counted at last audit + `run_spatial_eval.py`, 2026-07-25), 3 in
+`standards-service/eval/` (2 of which are near-duplicates of a backend script, repointed — see
+caveats). None are blended into one score; each pillar reports separately.
 
 **Compliance / extraction**
 - `run_eval.py` — structural rule engine (8 checks) + citation-hallucination rate. ~41 hand-built
@@ -198,6 +256,12 @@ script, repointed — see caveats). None are blended into one score; each pillar
   cases; exact-match accuracy.
 - `run_equipment_spec_eval.py` — IS 8623-1 LV switchgear spec matching. 12 cases incl. 4
   NOT_APPLICABLE (categories the standard doesn't cover); exact-match accuracy.
+- `run_spatial_eval.py` — Spatial Compliance's 6 checks (CEA switchboard clearances, NBC egress),
+  boundary-value cases built as flat param dicts (same shape `spatial/params.py::to_params()`
+  emits), reporting 3-way decision accuracy (PASS/FAIL/ABSTAIN/NOT_APPLICABLE), citation-
+  hallucination rate, and abstention correctness (a blanket-abstain baseline is reported alongside
+  so abstention isn't free credit). Reported on its own, never blended into `run_eval.py`'s or
+  `run_electrical_eval.py`'s numbers — see `eval/spatial_report.json` for the real numbers.
 
 **Commissioning**
 - `run_commissioning_eval.py` — ASHRAE-derived cooling envelope verdicts. 14 boundary cases

@@ -112,13 +112,35 @@ async def verify_event(event_id: str) -> dict:
     """Two independent checks: has the STORED record been tampered with
     (Mongo/JSONL integrity — recompute content_hash from hashed_fields), and
     does the on-chain memo still match (chain integrity, only meaningful once
-    anchored). `chain_intact` is null until the event is anchored."""
+    anchored).
+
+    `chain_status` is the field to render, not `chain_intact` alone:
+
+      not_anchored — never anchored; there is nothing on-chain to check
+      verified     — on-chain memo matches this record's hash
+      mismatch     — we READ the chain and it disagrees. Real tamper evidence
+      unreachable  — we could not reach the RPC. Says nothing about the record
+
+    `chain_intact` stays for backwards compatibility, but it is null for BOTH
+    "not anchored" and "unreachable", which is exactly the ambiguity that made
+    a network timeout render as a red "chain mismatch" badge on valid data.
+    Never colour a record red on anything but `mismatch`."""
     doc = audit.get_event(event_id)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"Unknown audit event id: {event_id}")
     mongo_intact = audit.verify_integrity(event_id)
     solana = doc.get("solana") or {}
-    chain_intact = None
+    chain_intact: bool | None = None
+    chain_status = "not_anchored"
     if solana.get("status") == "anchored" and solana.get("tx_sig"):
         chain_intact = await notary.verify_anchor(doc["content_hash"], solana["tx_sig"])
-    return {"mongo_intact": mongo_intact, "chain_intact": chain_intact}
+        chain_status = {
+            True: "verified",
+            False: "mismatch",
+            None: "unreachable",
+        }[chain_intact]
+    return {
+        "mongo_intact": mongo_intact,
+        "chain_intact": chain_intact,
+        "chain_status": chain_status,
+    }

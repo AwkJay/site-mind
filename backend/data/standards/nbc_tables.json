@@ -1,0 +1,95 @@
+{
+  "_note": "NBC 2016 Part 4 Table 4 (Capacity Factors) and Table 5 (Travel Distance), digitised verbatim from standards/NBC2016-Part-IV.pdf (pdfplumber page index 30 for Table 4, page index 31 for Table 5 -- printed page numbers 31 and 32). Row groupings were confirmed by rendering both pages to images and reading the curly-brace merged-cell groupings directly off the page (pdfplumber's linear text/word extraction alone does not disambiguate which occupancy rows share a merged value, so row->value assignment here is taken from the visual brace grouping, not guessed). Table 4 columns: 'stairways' and 'level_components_and_ramps' (doors, corridors, ramps), both in mm per person, per NBC Table 4 note '(3)'/'(4)'. Groups Residential (A) and Educational (B) share one merged cell (10 / 6.5); Groups Assembly (D), Business (E), Mercantile (F), Industrial (G) and Storage (H) share one merged cell (10 / 6.5); Institutional (C) and Hazardous (J) each have their own distinct value. Table 5 columns are 'types_1_and_2' and 'types_3_and_4' (construction type), in metres. For Industrial the table further splits by sub-group (G-1/G-2 vs G-3); Industrial sub-groups, Storage and Hazardous all carry 'types_3_and_4': 'See Note 3' because NBC Note 3 on that page states 'Construction of Type 3 or Type 4 is not permitted' for those occupancies, so no travel-distance number exists in the PDF for that cell -- this is not an extraction gap, it is what the table says. Nothing was omitted; every row/column the real tables carry is represented.",
+  "table_4": {
+    "_description": "Table 4 Capacity Factors [Clauses 4.4.2.1, 4.4.2.3(c) and 4.4.2.4.2(a)] -- width per person, mm.",
+    "source_page": 30,
+    "residential": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "i) Residential (Group A) ... 10  6.5 (merged cell shared with Educational (Group B))" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "i) Residential (Group A) ... 10  6.5 (merged cell shared with Educational (Group B))" }
+    },
+    "educational": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "ii) Educational (Group B) ... shares merged cell 10 / 6.5 with Residential (Group A)" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "ii) Educational (Group B) ... shares merged cell 10 / 6.5 with Residential (Group A)" }
+    },
+    "institutional": {
+      "stairways": { "value": 15, "unit": "mm/person", "verbatim_row": "iii) Institutional (Group C)  15  13" },
+      "level_components_and_ramps": { "value": 13, "unit": "mm/person", "verbatim_row": "iii) Institutional (Group C)  15  13" }
+    },
+    "assembly": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "iv) Assembly (Group D) ... merged cell shared with Business (E), Mercantile (F), Industrial (G), Storage (H): 10  6.5" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "iv) Assembly (Group D) ... merged cell shared with Business (E), Mercantile (F), Industrial (G), Storage (H): 10  6.5" }
+    },
+    "business": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "v) Business (Group E) ... merged cell shared with Assembly (D), Mercantile (F), Industrial (G), Storage (H): 10  6.5" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "v) Business (Group E) ... merged cell shared with Assembly (D), Mercantile (F), Industrial (G), Storage (H): 10  6.5" }
+    },
+    "mercantile": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "vi) Mercantile (Group F) ... merged cell shared with Assembly (D), Business (E), Industrial (G), Storage (H): 10  6.5" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "vi) Mercantile (Group F) ... merged cell shared with Assembly (D), Business (E), Industrial (G), Storage (H): 10  6.5" }
+    },
+    "industrial": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "vii) Industrial (Group G) ... merged cell shared with Assembly (D), Business (E), Mercantile (F), Storage (H): 10  6.5" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "vii) Industrial (Group G) ... merged cell shared with Assembly (D), Business (E), Mercantile (F), Storage (H): 10  6.5" }
+    },
+    "storage": {
+      "stairways": { "value": 10, "unit": "mm/person", "verbatim_row": "viii) Storage (Group H) ... merged cell shared with Assembly (D), Business (E), Mercantile (F), Industrial (G): 10  6.5" },
+      "level_components_and_ramps": { "value": 6.5, "unit": "mm/person", "verbatim_row": "viii) Storage (Group H) ... merged cell shared with Assembly (D), Business (E), Mercantile (F), Industrial (G): 10  6.5" }
+    },
+    "hazardous": {
+      "stairways": { "value": 18, "unit": "mm/person", "verbatim_row": "ix) Hazardous (Group J)  18  10" },
+      "level_components_and_ramps": { "value": 10, "unit": "mm/person", "verbatim_row": "ix) Hazardous (Group J)  18  10" }
+    }
+  },
+  "table_5": {
+    "_description": "Table 5 Travel Distance (Based on Occupancy and Construction Type) [Clauses 4.4.2.1 and 4.4.2.2] -- maximum travel distance, m.",
+    "source_page": 31,
+    "residential": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "i) Residential (Group A) 30.00 22.50" },
+      "types_3_and_4": { "value": 22.50, "unit": "m", "verbatim_row": "i) Residential (Group A) 30.00 22.50" }
+    },
+    "educational": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "ii) Educational (Group B) 30.00 22.50" },
+      "types_3_and_4": { "value": 22.50, "unit": "m", "verbatim_row": "ii) Educational (Group B) 30.00 22.50" }
+    },
+    "institutional": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "iii) Institutional (Group C) 30.00 22.50" },
+      "types_3_and_4": { "value": 22.50, "unit": "m", "verbatim_row": "iii) Institutional (Group C) 30.00 22.50" }
+    },
+    "assembly": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "iv) Assembly (Group D) 30.00 30.00" },
+      "types_3_and_4": { "value": 30.00, "unit": "m", "verbatim_row": "iv) Assembly (Group D) 30.00 30.00" }
+    },
+    "business": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "v) Business (Group E) 30.00 30.00" },
+      "types_3_and_4": { "value": 30.00, "unit": "m", "verbatim_row": "v) Business (Group E) 30.00 30.00" }
+    },
+    "mercantile": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "vi) Mercantile (Group F) 30.00 30.00" },
+      "types_3_and_4": { "value": 30.00, "unit": "m", "verbatim_row": "vi) Mercantile (Group F) 30.00 30.00" }
+    },
+    "industrial": {
+      "_note": "Industrial (Group G) splits by sub-group in the source table; there is no single Group-G value.",
+      "g1_g2": {
+        "types_1_and_2": { "value": 45.00, "unit": "m", "verbatim_row": "vii) Industrial (Group G) / G-1, G-2  45.00  See Note 3" },
+        "types_3_and_4": { "value": "See Note 3", "unit": "m", "verbatim_row": "vii) Industrial (Group G) / G-1, G-2  45.00  See Note 3" }
+      },
+      "g3": {
+        "types_1_and_2": { "value": 22.50, "unit": "m", "verbatim_row": "vii) Industrial (Group G) / G-3  22.50  See Note 3" },
+        "types_3_and_4": { "value": "See Note 3", "unit": "m", "verbatim_row": "vii) Industrial (Group G) / G-3  22.50  See Note 3" }
+      }
+    },
+    "storage": {
+      "types_1_and_2": { "value": 30.00, "unit": "m", "verbatim_row": "viii) Storage (Group H) 30.00 See Note 3" },
+      "types_3_and_4": { "value": "See Note 3", "unit": "m", "verbatim_row": "viii) Storage (Group H) 30.00 See Note 3" }
+    },
+    "hazardous": {
+      "types_1_and_2": { "value": 22.50, "unit": "m", "verbatim_row": "ix) Hazardous (Group J) 22.50 See Note 3" },
+      "types_3_and_4": { "value": "See Note 3", "unit": "m", "verbatim_row": "ix) Hazardous (Group J) 22.50 See Note 3" }
+    },
+    "notes": {
+      "note_1": "For fully sprinklered building, the travel distance may be increased by 50 percent of the values specified.",
+      "note_2": "Ramp shall not be counted as an exit in case of basements below the first basement in car parking.",
+      "note_3": "Construction of Type 3 or Type 4 is not permitted."
+    }
+  }
+}

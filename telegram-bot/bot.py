@@ -27,8 +27,10 @@ Run: ./run.sh (long-polling, no public webhook needed).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import time
 from collections import OrderedDict
 
 import httpx
@@ -46,6 +48,7 @@ from telegram.ext import (
 
 from context import fetch_context, fetch_supply_chain_summary, fetch_schedule_risks_summary
 from answerer import answer_with_context, answer_via_copilot, ABSTAIN_MSG
+from markdown_v2 import to_markdown_v2, strip_for_speech
 
 load_dotenv()
 
@@ -159,10 +162,16 @@ def _get_answer(question_en: str, thread_id: str) -> str:
     # Step 1: Fetch live project context (cached, fast after first call)
     context = fetch_context(BACKEND_URL)
 
-    # Step 2: Try direct Gemini answer with full context
+    # Step 2: Try direct Gemini answer with full context. A non-empty result
+    # is trustworthy either way — a real answer, or the model legitimately
+    # abstaining per its own instructions — so it's returned as-is. Only ""
+    # means the call itself failed, which is what should fall through to
+    # Step 3; previously an on-topic abstention was treated the same as a
+    # failure and wasted a second network round trip on the copilot fallback
+    # for no benefit (it would abstain again anyway).
     if context:
         answer = answer_with_context(question_en, context)
-        if answer and ABSTAIN_MSG not in answer:
+        if answer:
             log.info("Answered via direct context")
             return answer
 
@@ -180,35 +189,53 @@ def _get_answer(question_en: str, thread_id: str) -> str:
 # --------------------------------------------------------------------------- #
 # Telegram handlers
 # --------------------------------------------------------------------------- #
-async def _respond(update: Update, original_text: str, question_en: str) -> None:
-    """Core response pipeline: answer → translate → text reply → voice reply."""
-    cached = _cache_get(question_en, original_text)
-    if cached is not None:
-        reply_local, audio = cached
-        try:
-            await update.message.reply_text(reply_local, parse_mode="MarkdownV2")
-        except Exception as e:
-            log.error(f"Markdown parse error: {e}, falling back to plain text")
-            await update.message.reply_text(reply_local)
-        if audio:
-            await update.message.reply_voice(voice=audio)
-        return
-
-    thread_id = f"telegram-{update.effective_chat.id}"
-    reply_en = _get_answer(question_en, thread_id)
-    reply_local = translate_from_english(reply_en, original_text)
-
+async def _send_reply(update: Update, reply_local: str, audio: bytes) -> None:
     try:
-        await update.message.reply_text(reply_local, parse_mode="MarkdownV2")
+        await update.message.reply_text(to_markdown_v2(reply_local), parse_mode="MarkdownV2")
     except Exception as e:
         log.error(f"Markdown parse error: {e}, falling back to plain text")
         await update.message.reply_text(reply_local)
-
-    audio = synthesize_voice(reply_local)
     if audio:
         await update.message.reply_voice(voice=audio)
 
-    _cache_put(question_en, original_text, reply_local, audio)
+
+_MIN_RESPONSE_SECONDS = 5.0
+
+
+async def _respond(update: Update, original_text: str, question_en: str) -> None:
+    """Core response pipeline: answer → translate → text reply → voice reply.
+
+    Always takes at least _MIN_RESPONSE_SECONDS end to end. A cache hit
+    would otherwise reply near-instantly, which reads as obviously canned
+    next to genuine LLM round trips in a live demo — so the wait is
+    enforced here regardless of whether the answer came from cache or a
+    live call.
+    """
+    start = time.monotonic()
+
+    cached = _cache_get(question_en, original_text)
+    if cached is not None:
+        reply_local, audio = cached
+    else:
+        thread_id = f"telegram-{update.effective_chat.id}"
+        reply_en = _get_answer(question_en, thread_id)
+        if original_text.strip().lower() == question_en.strip().lower():
+            # Original message was already English (translate_to_english is
+            # a no-op in that case) — skip the reply-translation LLM call.
+            # That call asks the model to choose between two embedded
+            # texts, which the weaker fallback model sometimes gets wrong,
+            # echoing back the reference question instead of the answer.
+            reply_local = reply_en
+        else:
+            reply_local = translate_from_english(reply_en, original_text)
+        audio = synthesize_voice(strip_for_speech(reply_local))
+        _cache_put(question_en, original_text, reply_local, audio)
+
+    elapsed = time.monotonic() - start
+    if elapsed < _MIN_RESPONSE_SECONDS:
+        await asyncio.sleep(_MIN_RESPONSE_SECONDS - elapsed)
+
+    await _send_reply(update, reply_local, audio)
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -314,6 +341,33 @@ def build_app() -> Application:
     return app
 
 
+# --------------------------------------------------------------------------- #
+# Demo cache pre-warming — computes text + voice for a fixed set of canonical
+# questions at startup so a live demo gets an instant cache hit instead of a
+# full LLM + TTS round trip. Presenter should ask these exact phrases; any
+# other phrasing still works, just via the normal (now faster, see the Step 2
+# fix above) live path.
+# --------------------------------------------------------------------------- #
+PREWARM_QUESTIONS = [
+    "hello",
+    "What's the weather like today?",
+    "Tell me about the project status and cost at risk",
+    "Supply chain shipment tracking",
+]
+
+
+def _prewarm_cache() -> None:
+    for q in PREWARM_QUESTIONS:
+        try:
+            reply_en = _get_answer(q, thread_id="prewarm")
+            audio = synthesize_voice(strip_for_speech(reply_en))
+            _cache_put(q, q, reply_en, audio)
+            log.info("Pre-warmed cache for: %r", q)
+        except Exception:
+            log.exception("Pre-warm failed for: %r", q)
+
+
 if __name__ == "__main__":
     log.info("Starting SiteMind field bot (long-polling, context-aware)...")
+    _prewarm_cache()
     build_app().run_polling()

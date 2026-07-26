@@ -173,6 +173,14 @@ def _to_ncr(record: TestRecord, finding: CommissioningFinding, severity: str) ->
         why_it_matters=why,
         corrective_action=corrective,
         domain="mechanical",
+        # Set explicitly rather than inheriting schemas.py's "certified" default.
+        # It IS accurate about the COMPUTATION — the envelope check is pre-vetted
+        # deterministic Python, no LLM — but it says nothing about SOURCE trust,
+        # and this pillar's ASHRAE envelope is cross-source compiled, not verified.
+        # The card suppresses this chip when the citation is cross_source_unverified
+        # (NCRCard.tsx) so a green "pre-vetted" chip never sits beside a red
+        # "unverified source" chip on the same finding.
+        verdict_tier="certified",
     )
 
 

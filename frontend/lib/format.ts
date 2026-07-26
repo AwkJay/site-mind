@@ -93,6 +93,11 @@ export const domainMeta: Record<string, { label: string; color: string; bg: stri
   structural: { label: "Structural", color: "var(--text-mid)", bg: "rgba(159,176,191,0.12)" },
   electrical: { label: "Electrical", color: "var(--data)", bg: "rgba(56,189,248,0.12)" },
   mechanical: { label: "Mechanical", color: "var(--pass)", bg: "var(--pass-bg)" },
+  // Spatial Compliance (docs/superpowers/specs/2026-07-25-spatial-compliance-design.md)
+  // — geometry-derived findings (clearances, egress) reuse the existing NCRCard,
+  // which indexes this map by NCR.domain; "spatial" wasn't a domain the card
+  // knew about before this feature.
+  spatial: { label: "Spatial", color: "var(--accent)", bg: "rgba(190,242,100,0.12)" },
 };
 
 export const commissioningVerdictMeta: Record<
@@ -152,6 +157,30 @@ export const timelinePillarMeta: Record<TimelinePillar, { label: string; href: s
   schedule: { label: "Schedule", href: "/schedule" },
   supply_chain: { label: "Supply Chain", href: "/supply-chain" },
   commissioning: { label: "Commissioning QA", href: "/commissioning" },
+};
+
+// ── Spatial Compliance (FloorMap) — zone fill colours. Deliberately reuses
+// the same semantic palette as domainMeta/severityMeta rather than inventing
+// new hues, so the floor map reads as part of the same visual language.
+export const zoneMeta: Record<string, { label: string; color: string; bg: string }> = {
+  server_hall: { label: "Server hall", color: "var(--data)", bg: "rgba(56,189,248,0.14)" },
+  electrical: { label: "Electrical", color: "var(--warning)", bg: "rgba(255,176,32,0.14)" },
+  cooling: { label: "Cooling", color: "var(--pass)", bg: "rgba(59,214,113,0.14)" },
+  corridor: { label: "Corridor", color: "var(--text-mid)", bg: "rgba(159,176,191,0.14)" },
+  other: { label: "Other", color: "var(--accent)", bg: "rgba(190,242,100,0.14)" },
+};
+
+export function zoneMetaFor(zone: string): { label: string; color: string; bg: string } {
+  return zoneMeta[zone] ?? { label: zone, color: "var(--text-lo)", bg: "rgba(159,176,191,0.12)" };
+}
+
+export const equipmentKindLabel: Record<string, string> = {
+  switchboard: "Switchboard",
+  lv_panel: "LV panel",
+  transformer: "Transformer",
+  genset: "Genset",
+  crac: "CRAC unit",
+  rack_row: "Rack row",
 };
 
 export function statusMeta(status: string): { color: string; bg: string } {

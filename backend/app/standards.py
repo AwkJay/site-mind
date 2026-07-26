@@ -13,6 +13,7 @@ from .config import DATA_DIR
 from .schemas import Citation
 
 _CLAUSES_PATH = DATA_DIR / "standards" / "clauses.json"
+_SPATIAL_CLAUSES_PATH = DATA_DIR / "standards" / "spatial_clauses.json"
 
 # Minimal built-in fallback (subset of the real cache) so we never hard-crash.
 _FALLBACK = {
@@ -35,7 +36,19 @@ def _load() -> dict[str, dict]:
         raw = json.loads(_CLAUSES_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         raw = _FALLBACK
-    return {c["key"]: c for c in raw.get("clauses", [])}
+    clauses = {c["key"]: c for c in raw.get("clauses", [])}
+
+    # Spatial-domain clauses (backend/data/standards/spatial_clauses.json) are
+    # digitised separately so the original 24 clauses + their evals stay
+    # byte-identical. Merge them in the same way; missing/invalid file
+    # degrades silently exactly like clauses.json above.
+    try:
+        spatial_raw = json.loads(_SPATIAL_CLAUSES_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        spatial_raw = {}
+    clauses.update({c["key"]: c for c in spatial_raw.get("clauses", [])})
+
+    return clauses
 
 
 def get_clause(key: str) -> Optional[Citation]:

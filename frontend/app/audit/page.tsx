@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Database, HardDrive, Link2, RefreshCw, ShieldCheck, ShieldX } from "lucide-react";
+import { Database, ExternalLink, HardDrive, Link2, RefreshCw, ShieldCheck, ShieldX } from "lucide-react";
 import { anchorAllPending, anchorAuditEvent, getAudit, getHealth, seedAudit, verifyAuditEvent } from "@/lib/api";
 import type { AuditEvent } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,7 +27,12 @@ function solanaMeta(status: string): { label: string; color: string; bg: string 
   return { label: "Not anchored", color: "var(--text-lo)", bg: "rgba(159,176,191,0.10)" };
 }
 
-type VerifyResult = { mongo_intact: boolean | null; chain_intact: boolean | null };
+type ChainStatus = "not_anchored" | "verified" | "mismatch" | "unreachable";
+type VerifyResult = {
+  mongo_intact: boolean | null;
+  chain_intact: boolean | null;
+  chain_status?: ChainStatus;
+};
 
 export default function AuditPage() {
   const [events, setEvents] = useState<AuditEvent[] | null>(null);
@@ -184,12 +189,14 @@ export default function AuditPage() {
                             href={`https://explorer.solana.com/tx/${e.solana.tx_sig}?cluster=${e.solana.cluster ?? "devnet"}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1"
+                            title="View this transaction on Solana Explorer (devnet)"
+                            className="inline-flex items-center gap-1.5 underline decoration-dotted underline-offset-4 decoration-1 opacity-90 transition hover:opacity-100"
                           >
                             <Chip color={solana.color} bg={solana.bg}>
                               <ShieldCheck size={11} strokeWidth={2} />
                               {solana.label}
                             </Chip>
+                            <ExternalLink size={11} strokeWidth={2} className="text-text-lo" />
                           </a>
                         ) : (
                           <Chip color={solana.color} bg={solana.bg}>
@@ -220,9 +227,23 @@ export default function AuditPage() {
                                   <ShieldX size={12} strokeWidth={2} /> record altered
                                 </span>
                               )}
-                              {vr.chain_intact !== null && (
-                                <span className={vr.chain_intact ? "text-pass" : "text-critical"}>
-                                  · chain {vr.chain_intact ? "match" : "mismatch"}
+                              {/* Render chain_status, never chain_intact alone: a
+                                  null used to mean BOTH "not anchored" and "RPC
+                                  unreachable", so a devnet timeout painted a red
+                                  "mismatch" on a perfectly valid anchor. Only a
+                                  genuine, read-from-chain disagreement is red. */}
+                              {vr.chain_status === "verified" && (
+                                <span className="text-pass">· chain match</span>
+                              )}
+                              {vr.chain_status === "mismatch" && (
+                                <span className="text-critical">· chain mismatch</span>
+                              )}
+                              {vr.chain_status === "unreachable" && (
+                                <span
+                                  className="text-warning"
+                                  title="Could not reach the Solana RPC to check. This says nothing about the record — retry."
+                                >
+                                  · chain unverifiable (RPC unreachable)
                                 </span>
                               )}
                             </div>

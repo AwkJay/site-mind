@@ -6,9 +6,10 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import audit, config
+from . import audit, config, llm
 from .agents.action_brief import router as action_brief_router
 from .agents.compliance import router as compliance_router
+from .agents.floor_plan import router as floor_plan_router
 from .agents.copilot import router as copilot_router
 from .agents.copilot_agent import router as copilot_agent_router
 from .audit_api import router as audit_router, seed_preloaded
@@ -42,7 +43,11 @@ def health() -> dict:
     """offline_mode is True when no live LLM provider is configured. `provider` names
     the active backend (offline | codex | openai | anthropic). langfuse_enabled is
     True only when both LANGFUSE_SECRET_KEY/LANGFUSE_PUBLIC_KEY are configured —
-    the local trace log (`/api/trace`) is written either way."""
+    the local trace log (`/api/trace`) is written either way. `llm` is the
+    per-process disk-cache stats from app/llm_cache.py (see llm.get_stats()) —
+    live_calls/cache_hits/cache_fallbacks_after_error/errors since this backend
+    process started, so a viewer can always tell whether recent prose came from
+    a live call, a warm cache, or a post-error cache fallback."""
     return {
         "status": "ok",
         "offline_mode": config.OFFLINE_MODE,
@@ -50,6 +55,7 @@ def health() -> dict:
         "langfuse_enabled": config.LANGFUSE_ENABLED,
         "vector_store": config.RETRIEVAL_VECTOR_STORE,
         "audit_backend": audit.backend_name(),
+        "llm": llm.get_stats(),
     }
 
 
@@ -57,6 +63,7 @@ routers = (
     overview_router,
     documents_router,
     compliance_router,
+    floor_plan_router,
     action_brief_router,
     copilot_router,
     copilot_agent_router,

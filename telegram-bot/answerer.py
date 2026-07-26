@@ -65,18 +65,11 @@ clause lookup.
 handles that, not you.
 9. When mentioning costs, use ₹ (Indian Rupees) and use Indian numbering \
 (lakhs/crores).
-10. Format all responses using Telegram MarkdownV2 syntax.
-    Syntax Rules:
-    - Bold: *text*
-    - Italic: _text_
-    - Strikethrough: ~text~
-    - Spoiler: ||text||
-    - Inline Code: `code`
-    - Code Block: ```python\ncode\n```
-    - Inline Link: [Link Text](url)
-    - Blockquote: >text
-    CRITICAL ESCAPING RULE: Any character from this exact list outside code blocks MUST be preceded by a backslash (\\): _ * [ ] ( ) ~ ` > # + - = | {{ }} . !
-    Layout Rules: Do NOT escape characters inside inline code or multi-line code blocks. Do NOT output HTML tags. Separate paragraphs with double line breaks.
+10. Formatting: use *bold* (single asterisks) for key terms and headers, and \
+"•" for bullet points. Do not use any other formatting — no italics, links, \
+code blocks, headers, or strikethrough. Do not escape any characters \
+yourself; that is handled automatically before sending. Separate paragraphs \
+with double line breaks.
 """
 
 

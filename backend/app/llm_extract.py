@@ -308,15 +308,20 @@ def llm_enabled() -> bool:
     return config.LLM_EXTRACTION_ENABLED
 
 
-async def extract_params(text: str) -> tuple[list[ExtractedParam], list[Abstention]]:
+async def extract_params(
+    text: str, force_regex_only: bool = False
+) -> tuple[list[ExtractedParam], list[Abstention]]:
     """The smart PERCEIVE entry point used by POST /api/compliance/ingest.
 
     Always computes the regex result (the floor). When LLM extraction is enabled
     and succeeds, unions in the span-verified LLM finds. On any failure it returns
-    exactly the regex result — identical to the pre-LLM behaviour."""
+    exactly the regex result — identical to the pre-LLM behaviour. `force_regex_only`
+    lets a caller pin a document (e.g. one of the two golden demo files) to the
+    pure-regex path regardless of the LLM_EXTRACTION_ENABLED flag, so its cached
+    behaviour never drifts."""
     regex_found, regex_abstained = ingest.extract_params(text)
 
-    if not llm_enabled():
+    if force_regex_only or not llm_enabled():
         return regex_found, regex_abstained
 
     raw_items = await _call_claude_agent_sdk(text)

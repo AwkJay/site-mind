@@ -34,13 +34,35 @@ always tell whether a given run was served live or from cache.
 from __future__ import annotations
 
 import atexit
+import contextvars
 import json
 import logging
+from contextlib import contextmanager
 from typing import Optional
 
 from . import config, gemini_key_pool, llm_cache
 
 logger = logging.getLogger(__name__)
+
+# Per-call provider override (see use_provider() below) — lets a caller force a
+# specific provider (e.g. "iamhc" for a non-demo upload) for the duration of a
+# `with` block without touching the process-wide config.LLM_PROVIDER, which
+# must keep governing Copilot/Schedule/SupplyChain/Commissioning untouched.
+_provider_override: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "_provider_override", default=None
+)
+
+
+@contextmanager
+def use_provider(name: Optional[str]):
+    """Force `name` as the active provider for every complete_text/complete_json
+    call inside this `with` block, overriding config.LLM_PROVIDER for that scope
+    only. Pass None to explicitly clear back to the global default early."""
+    token = _provider_override.set(name)
+    try:
+        yield
+    finally:
+        _provider_override.reset(token)
 
 # Per-process counters, surfaced at GET /api/health as the `llm` sub-object.
 # Deliberately NOT persisted — this is "since this backend process started",
@@ -355,7 +377,7 @@ def complete_text(system: str, user: str, max_tokens: int = 800) -> str:
     if config.OFFLINE_MODE:
         return ""
 
-    provider = config.LLM_PROVIDER
+    provider = _provider_override.get() or config.LLM_PROVIDER
     if provider not in _MODEL_BY_PROVIDER:
         return ""  # unknown/unconfigured provider string — zero network calls, zero cache I/O
 

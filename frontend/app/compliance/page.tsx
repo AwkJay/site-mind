@@ -10,12 +10,21 @@ import {
   Upload,
   AlertTriangle,
 } from "lucide-react";
-import { getActionBrief, getDocuments, ingestDocument, IngestUnavailableError, streamCompliance } from "@/lib/api";
-import type { ActionBrief, ComplianceResult, DocItem, IngestResult } from "@/lib/types";
+import {
+  getActionBrief,
+  getDocuments,
+  ingestDocument,
+  ingestRegisteredDocument,
+  IngestUnavailableError,
+  postFloorPlan,
+  streamCompliance,
+} from "@/lib/api";
+import type { ActionBrief, ComplianceResult, DocItem, FloorPlanResult, IngestResult } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, Overline, Button, Skeleton, cn } from "@/components/ui/primitives";
 import { NCRCard } from "@/components/NCRCard";
 import { ActionBriefCard } from "@/components/ActionBriefCard";
+import { FloorMap } from "@/components/FloorMap";
 import { domainMeta, statusMeta } from "@/lib/format";
 
 type Phase = "idle" | "streaming" | "done";
@@ -27,6 +36,12 @@ const TYPE_LABEL: Record<string, string> = {
   rfi: "RFI",
 };
 
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function CompliancePage() {
   const [docs, setDocs] = useState<DocItem[] | null>(null);
   const [selected, setSelected] = useState<DocItem | null>(null);
@@ -37,8 +52,18 @@ export default function CompliancePage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestResult | null>(null);
+  // Which selected-doc id the current ingestResult was produced for — NOT the
+  // same as ingestResult.document_id, which is the UPLOAD-xxxx id the register
+  // row's real file was ingested into. Lets the extraction preview panel key
+  // off "the currently selected register row" instead of the opaque upload id.
+  const [ingestSourceId, setIngestSourceId] = useState<string | null>(null);
+  const [ingestingSelected, setIngestingSelected] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [actionBriefs, setActionBriefs] = useState<ActionBrief[] | null>(null);
   const [briefsLive, setBriefsLive] = useState<boolean | null>(null);
+  const [floorPlanResult, setFloorPlanResult] = useState<FloorPlanResult | null>(null);
+  const [floorPlanLoading, setFloorPlanLoading] = useState(false);
+  const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
   const traceEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,22 +82,56 @@ export default function CompliancePage() {
     traceEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [trace]);
 
-  function runCheck() {
+  async function runCheck() {
     if (!selected) return;
     cancelRef.current?.();
+    setCheckError(null);
     setPhase("streaming");
     setTrace("");
     setResult(null);
     setLive(null);
     setActionBriefs(null);
     setBriefsLive(null);
-    cancelRef.current = streamCompliance(selected.id, {
+
+    // Filesystem-backed register rows (has_file: true) carry a manifest id, not
+    // an upload id — read the real file off disk and extract from it FIRST, so
+    // the check that follows runs against real extracted parameters rather than
+    // any pre-structured fixture. Already-uploaded rows (from "Upload DBR")
+    // already have an upload id from ingestDocument(), so this step is skipped.
+    let checkId = selected.id;
+    if (selected.has_file) {
+      setIngestingSelected(true);
+      setTrace(
+        `Reading ${selected.filename ?? selected.title} off disk and extracting checkable parameters…\n`,
+      );
+      try {
+        const r = await ingestRegisteredDocument(selected.id);
+        setIngestResult(r);
+        setIngestSourceId(selected.id);
+        checkId = r.document_id;
+        setTrace(
+          (t) =>
+            t +
+            `Extracted ${r.checkable_params} checkable parameter(s), abstained on ${r.abstained.length}.\n`,
+        );
+      } catch (e) {
+        setIngestingSelected(false);
+        setPhase("idle");
+        setCheckError(
+          e instanceof Error ? e.message : "Reading the real document failed.",
+        );
+        return;
+      }
+      setIngestingSelected(false);
+    }
+
+    cancelRef.current = streamCompliance(checkId, {
       onReasoning: (chunk) => setTrace((t) => t + chunk),
       onResult: (r) => {
         setResult(r);
         setPhase("done");
         if (r.ncrs.length > 0) {
-          getActionBrief(selected.id, r.ncrs).then(({ data, live: l }) => {
+          getActionBrief(checkId, r.ncrs).then(({ data, live: l }) => {
             setActionBriefs(data);
             setBriefsLive(l);
           });
@@ -86,6 +145,8 @@ export default function CompliancePage() {
     setUploading(true);
     setUploadError(null);
     setIngestResult(null);
+    setFloorPlanResult(null);
+    setFloorPlanError(null);
     try {
       const r = await ingestDocument(file);
       setIngestResult(r);
@@ -96,11 +157,13 @@ export default function CompliancePage() {
         status: "Pending",
         discipline: "Structural",
       };
+      setIngestSourceId(uploadedDoc.id);
       setDocs((prev) => [uploadedDoc, ...(prev ?? [])]);
       setSelected(uploadedDoc);
       setPhase("idle");
       setResult(null);
       setTrace("");
+      setCheckError(null);
     } catch (e) {
       setUploadError(
         e instanceof IngestUnavailableError
@@ -113,6 +176,22 @@ export default function CompliancePage() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+
+    // Spatial extraction is a separate endpoint with its own honest
+    // success/failure path — independent of the scalar ingest above.
+    setFloorPlanLoading(true);
+    try {
+      const fp = await postFloorPlan(file);
+      setFloorPlanResult(fp);
+    } catch (e) {
+      setFloorPlanError(e instanceof Error ? e.message : "Floor-plan check failed.");
+    } finally {
+      setFloorPlanLoading(false);
+    }
+  }
+
+  function scrollToFinding(id: string) {
+    document.getElementById(`spatial-finding-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   return (
@@ -230,6 +309,22 @@ export default function CompliancePage() {
                             <div className="mt-1 text-[0.66rem] text-text-lo">
                               {TYPE_LABEL[d.type] ?? d.type} · {d.discipline}
                             </div>
+                            {/* Real-file proof: filename + size only exist for
+                                filesystem-backed register rows (has_file: true) —
+                                this is the visible evidence there's a real
+                                document behind this row, not a synthetic one. */}
+                            {d.has_file && (
+                              <div
+                                className="mt-1 flex items-center gap-1 truncate font-mono text-[0.62rem] text-text-lo"
+                                title={d.filename}
+                              >
+                                <span className="text-pass">●</span>
+                                <span className="truncate">{d.filename}</span>
+                                {typeof d.size_bytes === "number" && (
+                                  <span className="shrink-0">· {formatBytes(d.size_bytes)}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -260,7 +355,8 @@ export default function CompliancePage() {
             >
               {phase === "streaming" ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Checking…
+                  <Loader2 size={16} className="animate-spin" />{" "}
+                  {ingestingSelected ? "Reading document…" : "Checking…"}
                 </>
               ) : (
                 <>
@@ -270,50 +366,198 @@ export default function CompliancePage() {
             </Button>
           </Card>
 
-          {/* Real extraction preview — shown right after upload, before any check runs */}
-          {ingestResult && selected?.id === ingestResult.document_id && (
-            <Card className="px-5 py-4">
-              <div className="flex items-center justify-between">
-                <Overline>Extracted from the uploaded document</Overline>
-                <span className="font-mono text-[0.66rem] text-text-lo">
-                  {ingestResult.checkable_params} found · {ingestResult.abstained.length} abstained
-                </span>
-              </div>
-              {ingestResult.extracted.length > 0 ? (
-                <ul className="mt-3 space-y-2">
-                  {ingestResult.extracted.map((p, i) => (
-                    <li key={i} className="text-sm">
-                      <div className="text-text-hi">
-                        {p.element} · {p.param.replace(/_/g, " ")} ={" "}
-                        <span className="font-mono">{p.value} {p.unit}</span>
-                      </div>
-                      <p className="mt-0.5 font-mono text-[0.68rem] leading-snug text-text-lo">
-                        &ldquo;{p.source_quote}&rdquo;
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-sm text-text-mid">
-                  No parameters could be confidently extracted from this document — see the abstained
-                  list below for why. Running a compliance check on it will find 0 checkable parameters.
-                </p>
-              )}
-              {ingestResult.abstained.length > 0 && (
-                <div className="mt-4 border-t border-line pt-3">
-                  <div className="flex items-center gap-1.5 text-[0.7rem] font-medium text-text-lo">
-                    <AlertTriangle size={12} /> Abstained — not found or not confidently extractable
-                  </div>
-                  <ul className="mt-1.5 space-y-1">
-                    {ingestResult.abstained.map((a, i) => (
-                      <li key={i} className="text-[0.72rem] leading-snug text-text-lo">
-                        <span className="font-mono text-text-mid">{a.param.replace(/_/g, " ")}</span>
-                        {" — "}
-                        {a.reason}
+          {checkError && (
+            <p className="flex items-start gap-1.5 text-[0.8rem] leading-snug text-critical">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {checkError}
+            </p>
+          )}
+
+          {/* Real extraction preview — shown after ingest, before/alongside the check.
+              Keyed on ingestSourceId (the register row / upload id that produced this
+              ingestResult), not ingestResult.document_id itself — for register rows
+              those are two different ids (manifest id vs. the fresh UPLOAD-xxxx id). */}
+          {ingestResult && selected?.id === ingestSourceId && (() => {
+            // A layout document genuinely has zero rebar/structural figures to
+            // extract — that's correct abstention, not a failure. But rendered
+            // as ~15 abstention lines directly above the floor-map panel, it
+            // reads as one. When the spatial path found real spatial data on
+            // this same upload, re-order emphasis: one honest sentence saying
+            // why the structural/electrical set doesn't apply, with the full
+            // abstention list still reachable in one click, never hidden.
+            const isLayoutDocNoScalar =
+              floorPlanResult?.has_spatial_data === true && ingestResult.extracted.length === 0;
+            return (
+              <Card className="px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <Overline>Extracted from the uploaded document</Overline>
+                  <span className="font-mono text-[0.66rem] text-text-lo">
+                    {ingestResult.checkable_params} found · {ingestResult.abstained.length} abstained
+                  </span>
+                </div>
+                {ingestResult.extracted.length > 0 ? (
+                  <ul className="mt-3 space-y-2">
+                    {ingestResult.extracted.map((p, i) => (
+                      <li key={i} className="text-sm">
+                        <div className="text-text-hi">
+                          {p.element} · {p.param.replace(/_/g, " ")} ={" "}
+                          <span className="font-mono">{p.value} {p.unit}</span>
+                        </div>
+                        <p className="mt-0.5 font-mono text-[0.68rem] leading-snug text-text-lo">
+                          &ldquo;{p.source_quote}&rdquo;
+                        </p>
                       </li>
                     ))}
                   </ul>
+                ) : isLayoutDocNoScalar ? (
+                  <p className="mt-3 text-sm text-text-mid">
+                    This is a layout / design-basis document describing rooms, equipment and egress —
+                    it doesn&rsquo;t state structural figures like rebar cover, concrete grade or w/c
+                    ratio, so the structural/electrical parameter set genuinely doesn&rsquo;t apply here.
+                    See the floor-plan panel below for what this document <em>was</em> checked against.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-sm text-text-mid">
+                    No parameters could be confidently extracted from this document — see the abstained
+                    list below for why. Running a compliance check on it will find 0 checkable parameters.
+                  </p>
+                )}
+                {ingestResult.abstained.length > 0 &&
+                  (isLayoutDocNoScalar ? (
+                    <details className="mt-4 border-t border-line pt-3">
+                      <summary className="flex cursor-pointer items-center gap-1.5 text-[0.7rem] font-medium text-text-lo">
+                        <AlertTriangle size={12} />
+                        Why no structural parameters? ({ingestResult.abstained.length} abstained)
+                      </summary>
+                      <ul className="mt-1.5 space-y-1">
+                        {ingestResult.abstained.map((a, i) => (
+                          <li key={i} className="text-[0.72rem] leading-snug text-text-lo">
+                            <span className="font-mono text-text-mid">{a.param.replace(/_/g, " ")}</span>
+                            {" — "}
+                            {a.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <div className="mt-4 border-t border-line pt-3">
+                      <div className="flex items-center gap-1.5 text-[0.7rem] font-medium text-text-lo">
+                        <AlertTriangle size={12} /> Abstained — not found or not confidently extractable
+                      </div>
+                      <ul className="mt-1.5 space-y-1">
+                        {ingestResult.abstained.map((a, i) => (
+                          <li key={i} className="text-[0.72rem] leading-snug text-text-lo">
+                            <span className="font-mono text-text-mid">{a.param.replace(/_/g, " ")}</span>
+                            {" — "}
+                            {a.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+              </Card>
+            );
+          })()}
+
+          {/* Floor Plan — spatial compliance (docs/superpowers/specs/2026-07-25-spatial-compliance-design.md §6).
+              Populated by the same upload; a separate endpoint with its own
+              honest success/failure/abstention story. */}
+          {(floorPlanLoading || floorPlanResult || floorPlanError) && (
+            <Card className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <Overline>Floor Plan · spatial compliance</Overline>
+                {floorPlanResult && (
+                  <span className="font-mono text-[0.66rem] text-text-lo">
+                    {floorPlanResult.coverage.params_extracted} extracted ·{" "}
+                    {floorPlanResult.coverage.params_checked} checked ·{" "}
+                    {floorPlanResult.coverage.abstained} abstained
+                  </span>
+                )}
+              </div>
+
+              {floorPlanLoading && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-text-mid">
+                  <Loader2 size={15} className="animate-spin" /> Extracting spatial geometry from the
+                  document…
                 </div>
+              )}
+
+              {floorPlanError && !floorPlanLoading && (
+                <p className="mt-3 flex items-start gap-1.5 text-[0.8rem] leading-snug text-critical">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                  {floorPlanError}
+                </p>
+              )}
+
+              {floorPlanResult && !floorPlanLoading && (
+                <>
+                  {!floorPlanResult.has_spatial_data ? (
+                    <p className="mt-3 text-sm leading-relaxed text-text-mid">
+                      {floorPlanResult.reason ?? "No spatial data found in this document."}
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-4">
+                      {floorPlanResult.floor_plan && (
+                        <FloorMap
+                          floorPlan={floorPlanResult.floor_plan}
+                          findings={floorPlanResult.findings}
+                          notCheckedZones={floorPlanResult.not_checked_zones}
+                          onPinClick={scrollToFinding}
+                        />
+                      )}
+
+                      {/* not_checked_zones — a visible caption, not a tooltip */}
+                      {floorPlanResult.not_checked_zones.length > 0 && (
+                        <div className="rounded border border-line bg-bg-900/50 px-3.5 py-2.5">
+                          <div className="overline mb-1" style={{ color: "var(--warning)" }}>
+                            Rendered but deliberately not checked
+                          </div>
+                          <ul className="space-y-1">
+                            {floorPlanResult.not_checked_zones.map((z) => (
+                              <li key={z.zone} className="text-[0.78rem] leading-snug text-text-mid">
+                                <span className="font-mono text-text-hi">{z.zone.replace(/_/g, " ")}</span>
+                                {" — "}
+                                {z.reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* spatial findings, id-anchored so map pins can scroll to them,
+                          reusing the existing NCRCard (which itself renders
+                          CitedClauseBox -> ClauseViewerModal, unchanged). */}
+                      {floorPlanResult.findings.length > 0 && (
+                        <div className="space-y-3">
+                          <Overline>Spatial findings</Overline>
+                          {floorPlanResult.findings.map((f, i) => (
+                            <div key={f.id} id={`spatial-finding-${f.id}`}>
+                              <NCRCard ncr={f} index={i} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* abstentions — treated as a feature, always visible */}
+                      {floorPlanResult.abstentions.length > 0 && (
+                        <div className="rounded border border-line bg-bg-900/50 px-3.5 py-2.5">
+                          <div className="flex items-center gap-1.5 text-[0.7rem] font-medium text-text-lo">
+                            <AlertTriangle size={12} /> Abstained — no verdict rather than a guess
+                          </div>
+                          <ul className="mt-1.5 space-y-1.5">
+                            {floorPlanResult.abstentions.map((a, i) => (
+                              <li key={i} className="text-[0.75rem] leading-snug text-text-lo">
+                                <span className="font-mono text-text-mid">{a.what}</span>
+                                {" — "}
+                                {a.why}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </Card>
           )}
@@ -327,8 +571,21 @@ export default function CompliancePage() {
                   <Overline>Agent reasoning trace</Overline>
                 </div>
                 {live !== null && (
-                  <span className="font-mono text-[0.66rem] text-text-lo">
-                    {live ? "● live · backend SSE" : "● simulated · mock stream"}
+                  // "live" here means the SSE stream is genuinely coming from the
+                  // backend — NOT that the text is model-generated. The trace is a
+                  // deterministic per-parameter-type string table (`_reasoning_trace`
+                  // in compliance.py), which is the honest thing for it to be: this
+                  // panel narrates steps that are themselves deterministic. Label it
+                  // for what it is so nobody reads it as the model thinking aloud.
+                  <span
+                    className="font-mono text-[0.66rem] text-text-lo"
+                    title={
+                      live
+                        ? "Streamed live from the backend. The trace text is deterministic, not model-generated — it narrates the same Python steps that compute the verdict."
+                        : "Backend unreachable — this is a simulated stream of mock data."
+                    }
+                  >
+                    {live ? "● backend SSE · deterministic trace" : "● simulated · mock stream"}
                   </span>
                 )}
               </div>

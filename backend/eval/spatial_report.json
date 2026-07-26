@@ -1,0 +1,379 @@
+{
+  "n_cases": 50,
+  "label_space": [
+    "PASS",
+    "FAIL",
+    "ABSTAIN",
+    "NOT_APPLICABLE"
+  ],
+  "n_correct": 50,
+  "accuracy": 1.0,
+  "always_abstain_baseline_accuracy": 0.36,
+  "citation_hallucination_rate": 0.0,
+  "citations_checked": 13,
+  "citations_hallucinated": [],
+  "abstention_correctness": {
+    "should_abstain_total": 18,
+    "should_abstain_and_did": 18,
+    "recall": 1.0,
+    "should_not_abstain_total": 32,
+    "should_not_abstain_and_didnt": 32,
+    "correct_non_abstention_rate": 1.0,
+    "note": "recall = of cases that SHOULD abstain, fraction that DID abstain. correct_non_abstention_rate = of cases that should NOT abstain (a real PASS or FAIL), fraction where the system reached that verdict instead of abstaining. Both must be reported together \u2014 abstaining on everything scores recall=1.0 but correct_non_abstention_rate=0.0, which is why decision `accuracy` above (exact 3-way label match) is the headline, not this pair alone."
+  },
+  "results": [
+    {
+      "case": "front-fail-0.99",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_a"
+    },
+    {
+      "case": "front-pass-1.00-boundary",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "front-pass-1.01",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "front-pass-well-over",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "front-fail-well-under",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_a"
+    },
+    {
+      "case": "front-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "front-not-applicable-wrong-equipment",
+      "gold": "NOT_APPLICABLE",
+      "got": "NOT_APPLICABLE",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "rear-pass-0.19",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "rear-fail-0.20-boundary",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_b"
+    },
+    {
+      "case": "rear-fail-0.75-boundary",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_b"
+    },
+    {
+      "case": "rear-pass-0.76",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "rear-fail-midband-0.45",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_b"
+    },
+    {
+      "case": "rear-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "rear-not-applicable-wrong-equipment",
+      "gold": "NOT_APPLICABLE",
+      "got": "NOT_APPLICABLE",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "passage-fail-1.79",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "CEA_2010_37iii_c"
+    },
+    {
+      "case": "passage-pass-1.80-boundary",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "passage-pass-1.81",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "passage-abstain-rear-clearance-unknown",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "passage-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "passage-not-applicable-rear-clearance-under-threshold",
+      "gold": "NOT_APPLICABLE",
+      "got": "NOT_APPLICABLE",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-pass-well-under-5",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-pass-strict-boundary-6.0",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-abstain-just-over-strict-6.01",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-abstain-ambiguous-10",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-abstain-loose-boundary-15.0",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-fail-just-over-loose-15.01",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2c"
+    },
+    {
+      "case": "deadend-fail-well-over-16",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2c"
+    },
+    {
+      "case": "deadend-pass-with-stated-group-institutional",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-fail-with-stated-group-institutional",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2c"
+    },
+    {
+      "case": "deadend-pass-with-stated-group-industrial",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "deadend-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-pass-well-under-20",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-pass-strict-boundary-22.5",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-abstain-just-over-strict-22.51",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-abstain-ambiguous-30",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-abstain-loose-boundary-45.0",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-fail-just-over-loose-45.01",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2a"
+    },
+    {
+      "case": "travel-fail-well-over-50",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2a"
+    },
+    {
+      "case": "travel-pass-with-stated-group-residential",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-fail-with-stated-group-residential",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.2a"
+    },
+    {
+      "case": "travel-abstain-unresolvable-group-industrial",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "travel-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-fail-1299",
+      "gold": "FAIL",
+      "got": "FAIL",
+      "pass": true,
+      "clause_key": "NBC2016_4.4.2.3"
+    },
+    {
+      "case": "exitwidth-pass-1300-boundary",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-pass-1301",
+      "gold": "PASS",
+      "got": "PASS",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-abstain-occupant-load-missing",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-abstain-occupant-load-not-stated",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-abstain-group-missing",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-abstain-group-unresolvable",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    },
+    {
+      "case": "exitwidth-abstain-inferred-provenance",
+      "gold": "ABSTAIN",
+      "got": "ABSTAIN",
+      "pass": true,
+      "clause_key": null
+    }
+  ],
+  "method": "Boundary-value cases against the REAL check registry (app/agents/checks_spatial.py), built as flat param dicts in the exact shape `spatial/params.py::to_params()` emits in production (same pattern as run_electrical_eval.py). Decision is deterministic Python; every FAIL's citation is resolved via app.standards.get_clause AND independently cross-checked against a separate read of spatial_clauses.json.",
+  "limitation": "EGRESS_EXIT_WIDTH's PASS/FAIL cases supply occupancy_group/occupant_load directly because spatial/extract.py has no regex path that ever populates Room.occupancy_group (see docs/gaps.md) \u2014 the live regex extractor can only ever reach ABSTAIN for this check today, never PASS/FAIL. The full real-extractor end-to-end path (demo doc -> regex -> layout -> checks) is covered separately by tests/test_spatial_api.py::test_demo_doc_end_to_end, not re-measured here.",
+  "headline": "0.00 citation-hallucination rate over 13 emitted FAIL citations; 100.00% 3-way decision accuracy over 50 boundary cases (a blanket-abstain strategy would score 36.00% on this same set, not 100%)."
+}

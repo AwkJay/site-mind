@@ -446,12 +446,18 @@ def to_param_dicts(found: list[ExtractedParam]) -> list[dict]:
 _UPLOADS: dict[str, dict] = {}
 
 
-def register_upload(title: str, params: list[dict], abstained: list[Abstention]) -> str:
+def register_upload(
+    title: str,
+    params: list[dict],
+    abstained: list[Abstention],
+    content_hash: Optional[str] = None,
+) -> str:
     document_id = f"UPLOAD-{uuid.uuid4().hex[:8].upper()}"
     _UPLOADS[document_id] = {
         "title": title,
         "params": params,
         "abstained": [{"param": a.param, "reason": a.reason} for a in abstained],
+        "content_hash": content_hash,
     }
     return document_id
 
