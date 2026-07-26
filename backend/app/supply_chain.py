@@ -15,9 +15,11 @@ from __future__ import annotations
 from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from typing import Optional
 
+from . import audit
 from . import clock
 from . import supply_chain_overrides as overrides
 from .data_loader import load_schedule, load_supply_chain
@@ -468,3 +470,49 @@ def get_map() -> dict:
             }
         )
     return {"points": points, "routes": routes}
+
+
+class AdjustDelayRequest(BaseModel):
+    delta_days: int
+    note: str | None = None
+
+
+@router.post("/shipments/{shipment_id}/adjust-delay", response_model=Shipment)
+def adjust_delay(shipment_id: str, body: AdjustDelayRequest) -> Shipment:
+    known_ids = {s.id for s in shipments()}
+    if shipment_id not in known_ids:
+        raise HTTPException(status_code=404, detail=f"Unknown shipment_id: {shipment_id}")
+
+    new_total = overrides.apply_delta(shipment_id, body.delta_days)
+    updated = next(s for s in shipments() if s.id == shipment_id)
+
+    audit.record_event(
+        "supply_chain",
+        "shipment_delay_adjusted",
+        shipment_id,
+        {
+            "delta_days": body.delta_days,
+            "new_cumulative_delta": new_total,
+            "new_days_at_risk": updated.days_at_risk,
+            "note": body.note,
+        },
+    )
+    return updated
+
+
+@router.post("/shipments/{shipment_id}/reset-delay", response_model=Shipment)
+def reset_delay(shipment_id: str) -> Shipment:
+    known_ids = {s.id for s in shipments()}
+    if shipment_id not in known_ids:
+        raise HTTPException(status_code=404, detail=f"Unknown shipment_id: {shipment_id}")
+
+    overrides.reset(shipment_id)
+    updated = next(s for s in shipments() if s.id == shipment_id)
+
+    audit.record_event(
+        "supply_chain",
+        "shipment_delay_reset",
+        shipment_id,
+        {"new_days_at_risk": updated.days_at_risk},
+    )
+    return updated
